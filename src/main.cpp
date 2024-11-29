@@ -8,8 +8,7 @@
 #include"EulerianSprayProblem.h"
 
 int main(int argc, char ** argv){
-	int dimension=1;
-	EulerianSprayProblem<dimension> problem;
+	const int dimension=1;
 	
 	return 0;
 }

@@ -9,21 +9,22 @@ set(TARGET "main")
 # the one step-X.cc file, but as you expand your project you may wish
 # to add other source files as well. If your project becomes much larger,
 # you may want to either replace the following statement by something like
-#    file(GLOB_RECURSE TARGET_SRC  "source/*.cc")
+#    file(GLOB_RECURSE TARGET_SRC  "source/*.cpp")
 #    file(GLOB_RECURSE TARGET_INC  "include/*.h")
 #    set(TARGET_SRC ${TARGET_SRC}  ${TARGET_INC})
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
 set(TARGET_SRC
-  ${TARGET}.cc
+  src/${TARGET}.cpp
+  src/EulerianSprayProblem.cpp
+  inc/EulerianSprayProblem.h
   )
 
-# Usually, you will not need to modify anything beyond this point...
 
 cmake_minimum_required(VERSION 3.13.4)
-
-find_package(deal.II 9.5.0
+# Find dealii
+find_package(deal.II 9.3.1 #u/sw/toolchains/gcc-glibc/11.2.0/pkgs/dealii 
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 if(NOT ${deal.II_FOUND})
@@ -37,3 +38,6 @@ endif()
 deal_ii_initialize_cached_variables()
 project(${TARGET})
 deal_ii_invoke_autopilot()
+
+# Include the directory for headers
+target_include_directories(${TARGET} PRIVATE inc)
