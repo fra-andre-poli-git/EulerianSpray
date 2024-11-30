@@ -42,3 +42,6 @@ compile_commands.json
 
 #The executable, which has no extension
 main
+
+#VSCode stuff
+.vscode/
