@@ -15,11 +15,9 @@ set(TARGET "main")
 # or switch altogether to the large project CMakeLists.txt file discussed
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
-set(TARGET_SRC
-  src/${TARGET}.cpp
-  src/EulerianSprayProblem.cpp
-  inc/EulerianSprayProblem.h
-  )
+  file(GLOB_RECURSE TARGET_SRC "src/*.cpp")
+  file(GLOB_RECURSE TARGET_INC "inc/*.h")
+set(TARGET_SRC ${TARGET_SRC} ${TARGET_INC})
 
 
 cmake_minimum_required(VERSION 3.13.4)
