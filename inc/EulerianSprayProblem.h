@@ -8,8 +8,10 @@
 #include<deal.II/fe/mapping_q.h>
 #include<deal.II/dofs/dof_handler.h>
 #include<deal.II/numerics/data_postprocessor.h>
+#include<deal.II/lac/la_parallel_vector.h>
 
 using namespace dealii;
+using Number = double;
 
 template<int dim> class EulerianSprayProblem{
     public:
@@ -23,6 +25,9 @@ template<int dim> class EulerianSprayProblem{
         void assemble_system();
         //Here the version with p4est would need a different type: parallel::distributed::Triangulation<dim> triangulation;
 
+        //If I decide to use MPI I will take the opportunity to define a ConditionalOStream here
+
+        LinearAlgebra::distributed::Vector<Number> solution;
         Triangulation<dim> triangulation;
         const FESystem<dim> fe;
         MappingQ<dim> mapping;
