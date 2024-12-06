@@ -33,7 +33,7 @@ template<int dim> class EulerianSprayProblem{
         MappingQ<dim> mapping;
         DoFHandler<dim> dof_handler;
 
-        double time, time_step;
+        double final_time, time, time_step;
         // Questo magari lo dichiaro meglio quando capisco cosa voglio fare di post processing
         class Postprocessor : public DataPostprocessor<dim>{
             public:

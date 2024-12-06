@@ -5,8 +5,8 @@
 #include<iostream>
 
 constexpr unsigned int testcase = 1;
-constexpr int fe_degree = 0;
-constexpr int n_global_refinements = 4;
+constexpr int fe_degree = 2;
+constexpr int n_global_refinements = 7;
 
 template <int dim>
 EulerianSprayProblem<dim>::EulerianSprayProblem():
@@ -24,7 +24,8 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
         case 1:{
             GridGenerator::hyper_cube(triangulation, -1., 1.);
             // I don't know why, but in step 67 it refines the mesh two times previously than n_global_refinement
-            triangulation.refine_global(2);
+            //triangulation.refine_global(2);
+            final_time = 0.5;
             break;
         }
         default:
@@ -35,8 +36,8 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
 
     dof_handler.distribute_dofs(fe);
 
-    std::cout<< "Number of degrees of freedom"<<dof_handler.n_dofs()
-             << " ( = " << (dim + 2) << " [vars] x "
+    std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
+             << " ( = " << (dim + 1) << " [vars] x "
              << triangulation.n_global_active_cells() << " [cells] x "
              << Utilities::pow(fe_degree + 1, dim) << " [dofs/cell/var] )"
              << std::endl;
@@ -48,7 +49,34 @@ void EulerianSprayProblem<dim>::run(){
 
     make_grid_and_dofs();
 
-    time_step = 1./std::pow((fe_degree+1),2)/* *h */;
+    //This small chunk aims at finding h, the smallest distance between two nodes
+    double min_vertex_distance = std::numeric_limits<double>::max();
+    for(const auto & cell : triangulation.active_cell_iterators()){
+        min_vertex_distance =
+            std::min(min_vertex_distance, cell->minimum_vertex_distance());
+    }
+    // with MPI here I have to make the minimum over all processors
+
+    // Here I should initialize the solution
+    // Step 67 does this projectin the exact solution onto the solution vector
+
+
+    // Now I set the time step to be exactly the biggest to satisfy CFL condition
+    time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;
+    std::cout << "Time step: " << time_step << std::endl;
+
+    // This is the time loop
+    time = 0; // I don't know why time is defined in the class, maybe it will be useful in other function
+    unsigned int timestep_number = 0;
+    while(time < final_time - 1e-12){
+        timestep_number++;
+
+        // Here the integration in time is performed by class called integrator
+
+
+
+        time += time_step;
+    }
 
 
 }
@@ -56,3 +84,4 @@ void EulerianSprayProblem<dim>::run(){
 // Instantiation of the template
 template class EulerianSprayProblem<1>;
 template class EulerianSprayProblem<2>;
+template class EulerianSprayProblem<3>;
