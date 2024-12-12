@@ -1,12 +1,14 @@
 #include"EulerianSprayProblem.h"
+#include"TypesDefinition.h"
+
+#include"InitialSolution.h"
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/fe/fe_dgq.h>
 #include<deal.II/base/utilities.h>
+#include<deal.II/numerics/vector_tools.h>
+
 #include<iostream>
 
-constexpr unsigned int testcase = 1;
-constexpr int fe_degree = 2;
-constexpr int n_global_refinements = 7;
 
 template <int dim>
 EulerianSprayProblem<dim>::EulerianSprayProblem():
@@ -28,8 +30,7 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
             final_time = 0.5;
             break;
         }
-        default:
-            Assert(false, ExcNotImplemented());     
+   
     }
 
     triangulation.refine_global(n_global_refinements);
@@ -42,6 +43,8 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
              << Utilities::pow(fe_degree + 1, dim) << " [dofs/cell/var] )"
              << std::endl;
 }
+
+
 
 template <int dim>
 void EulerianSprayProblem<dim>::run(){
@@ -58,7 +61,10 @@ void EulerianSprayProblem<dim>::run(){
     // with MPI here I have to make the minimum over all processors
 
     // Here I should initialize the solution
-    // Step 67 does this projectin the exact solution onto the solution vector
+    // Step 67 does this projecting the exact solution onto the solution vector
+    // But I don't have an expression that gives the exact solution at every time
+    // therefore I use VectorTools::interpolate
+ //   VectorTools::interpolate(mapping, dof_handler, InitialSolution<dim+1>, solution);
 
 
     // Now I set the time step to be exactly the biggest to satisfy CFL condition
