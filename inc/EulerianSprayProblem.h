@@ -4,6 +4,7 @@
 // here my machine takes the header files from usr/include/deal.II
 // the ones in the mk modules are in /u/sw/toolchains/gcc-glibc/11.2.0/pkgs/dealii/9.3.1/include/deal.II
 #include"TypesDefinition.h"
+#include"EulerianSprayOperator.h"
 #include<deal.II/grid/tria.h>
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
@@ -31,6 +32,8 @@ template<int dim> class EulerianSprayProblem{
         const FESystem<dim> fe;
         MappingQ<dim> mapping;
         DoFHandler<dim> dof_handler;
+
+        EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerianspray_operator;
 
         double final_time, time, time_step;
         // Questo magari lo dichiaro meglio quando capisco cosa voglio fare di post processing

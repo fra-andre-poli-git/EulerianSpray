@@ -37,6 +37,8 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
 
     dof_handler.distribute_dofs(fe);
 
+    eulerianspray_operator.reinit(mapping, dof_handler);
+
     std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
              << " ( = " << (dim + 1) << " [vars] x "
              << triangulation.n_global_active_cells() << " [cells] x "
@@ -62,9 +64,8 @@ void EulerianSprayProblem<dim>::run(){
 
     // Here I should initialize the solution
     // Step 67 does this projecting the exact solution onto the solution vector
-    // But I don't have an expression that gives the exact solution at every time
-    // therefore I use VectorTools::interpolate
- //   VectorTools::interpolate(mapping, dof_handler, InitialSolution<dim+1>, solution);
+    // but I don't have an exact solution for every time step, therefore I use the initial solution
+    eulerianspray_operator.project(InitialSolution<dim>(), solution);
 
 
     // Now I set the time step to be exactly the biggest to satisfy CFL condition
@@ -77,7 +78,7 @@ void EulerianSprayProblem<dim>::run(){
     while(time < final_time - 1e-12){
         timestep_number++;
 
-        // Here the integration in time is performed by class called integrator
+        // Here the integration in time is performed by a class called integrator
 
 
 
