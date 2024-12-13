@@ -38,6 +38,7 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
     dof_handler.distribute_dofs(fe);
 
     eulerianspray_operator.reinit(mapping, dof_handler);
+    eulerianspray_operator.initialize_vector(solution);
 
     std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
              << " ( = " << (dim + 1) << " [vars] x "
@@ -66,7 +67,7 @@ void EulerianSprayProblem<dim>::run(){
     // Step 67 does this projecting the exact solution onto the solution vector
     // but I don't have an exact solution for every time step, therefore I use the initial solution
     eulerianspray_operator.project(InitialSolution<dim>(), solution);
-
+    std::cout<<solution<<std::endl;
 
     // Now I set the time step to be exactly the biggest to satisfy CFL condition
     time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;

@@ -54,6 +54,14 @@ template <int dim, int degree, int n_points_1d>
       mapping, dof_handlers, constraints, quadratures, additional_data);
 }
 
+  template <int dim, int degree, int n_points_1d>
+  void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
+    SolutionType &vector) const
+  {
+    data.initialize_dof_vector(vector);
+  }
+
+
 
 
 //Instantiation

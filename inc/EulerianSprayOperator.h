@@ -16,6 +16,7 @@ class EulerianSprayOperator{
                 const DoFHandler<dim> &dof_handler);
         void project(const Function<dim> & function,
                      SolutionType &solution) const;
+        void initialize_vector(SolutionType &vector) const;
     private:
         MatrixFree<dim, Number> data;
 };
