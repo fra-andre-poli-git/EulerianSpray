@@ -14,6 +14,4 @@ constexpr int fe_degree = 2;
 constexpr int n_global_refinements = 7;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
 
-
-
 #endif

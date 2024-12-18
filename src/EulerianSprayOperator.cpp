@@ -5,11 +5,12 @@
 
 
 
-// This function is entirely copied from tutorial 67. The only thing changed is dim +2
-// which becomes dim+1 since here I don't have an energy equation
+// This function is entirely copied from tutorial 67. The only thing changed is
+// dim +2 which becomes dim+1 since here I don't have an energy equation
 template <int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::project(const Function<dim> & function,
-                                                    SolutionType &solution) const{
+void EulerianSprayOperator<dim, degree, n_points_1d>::project(
+                                                const Function<dim> & function,
+                                                SolutionType &solution) const{
     FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
     MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
         inverse(phi);
@@ -27,6 +28,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::project(const Function<dim
     }                                                
 }
 
+// This function is entirely copied from tutorial 67.
 template <int dim, int degree, int n_points_1d>
   void EulerianSprayOperator<dim, degree, n_points_1d>::reinit(
     const Mapping<dim> &   mapping,
@@ -62,6 +64,39 @@ template <int dim, int degree, int n_points_1d>
   }
 
 
+
+// This is the implementation of the two helper function (defined here since
+// they are only used by EulerianSprayOperator methods)
+template <int dim, typename Number>
+VectorizedArray<Number>
+evaluate_function(const Function<dim> &                      function,
+                const Point<dim, VectorizedArray<Number>> &p_vectorized,
+                const unsigned int                         component){
+    VectorizedArray<Number> result;
+    for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
+        Point<dim> p;
+        for (unsigned int d = 0; d < dim; ++d)
+            p[d] = p_vectorized[d][v];
+        result[v] = function.value(p, component);
+    }
+    return result;
+}
+
+template <int dim, typename Number, int n_components = dim + 1>
+Tensor<1, n_components, VectorizedArray<Number>>
+evaluate_function(const Function<dim> &                      function,
+                const Point<dim, VectorizedArray<Number>> &p_vectorized){
+    AssertDimension(function.n_components, n_components);
+    Tensor<1, n_components, VectorizedArray<Number>> result;
+    for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
+        Point<dim> p;
+        for (unsigned int d = 0; d < dim; ++d)
+            p[d] = p_vectorized[d][v];
+        for (unsigned int d = 0; d < n_components; ++d)
+            result[d][v] = function.value(p, d);
+    }
+    return result;
+}
 
 
 //Instantiation

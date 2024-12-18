@@ -9,6 +9,11 @@
 
 using namespace dealii;
 
+
+// This class implements the evaluators for Eulerian Spray problem
+// in analogy to the 'EulerOperator' class in step-67 and 'LaplaceOperator'
+// in step-37 or step-59. Since this operator is non-linear and does not require
+//
 template<int dim, int degree, int n_points_1d>
 class EulerianSprayOperator{
     public:
@@ -27,33 +32,11 @@ class EulerianSprayOperator{
 // Completely copied from tutorial 67
 template <int dim, typename Number>
 VectorizedArray<Number>
-evaluate_function(const Function<dim> &                      function,
-                const Point<dim, VectorizedArray<Number>> &p_vectorized,
-                const unsigned int                         component){
-    VectorizedArray<Number> result;
-    for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
-        Point<dim> p;
-        for (unsigned int d = 0; d < dim; ++d)
-            p[d] = p_vectorized[d][v];
-        result[v] = function.value(p, component);
-    }
-    return result;
-}
-
+evaluate_function(const Function<dim> &, const Point<dim, VectorizedArray<Number>> &, const unsigned int){};
 
 template <int dim, typename Number, int n_components = dim + 1>
 Tensor<1, n_components, VectorizedArray<Number>>
-evaluate_function(const Function<dim> &                      function,
-                const Point<dim, VectorizedArray<Number>> &p_vectorized){
-    AssertDimension(function.n_components, n_components);
-    Tensor<1, n_components, VectorizedArray<Number>> result;
-    for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
-        Point<dim> p;
-        for (unsigned int d = 0; d < dim; ++d)
-            p[d] = p_vectorized[d][v];
-        for (unsigned int d = 0; d < n_components; ++d)
-            result[d][v] = function.value(p, d);
-    }
-    return result;
-}
+evaluate_function(const Function<dim> &, const Point<dim, VectorizedArray<Number>> &){};
+
+
 #endif
