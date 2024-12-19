@@ -1,32 +1,9 @@
 #include"EulerianSprayOperator.h"
+#include"InlinedFunctions.h"
 #include<deal.II/matrix_free/fe_evaluation.h>
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
 
-
-
-// This function is entirely copied from tutorial 67. The only thing changed is
-// dim +2 which becomes dim+1 since here I don't have an energy equation
-template <int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::project(
-                                                const Function<dim> & function,
-                                                SolutionType &solution) const{
-    FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
-    MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
-        inverse(phi);
-    solution.zero_out_ghost_values();
-    for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell){
-        phi.reinit(cell);
-        for (unsigned int q = 0; q < phi.n_q_points; ++q)
-            phi.submit_dof_value(evaluate_function(function,
-                                                    phi.quadrature_point(q)),
-                                 q);
-        inverse.transform_from_q_points_to_basis(dim + 1,
-                                                 phi.begin_dof_values(),
-                                                 phi.begin_dof_values());
-        phi.set_dof_values(solution);
-    }                                                
-}
 
 // This function is entirely copied from tutorial 67.
 template <int dim, int degree, int n_points_1d>
@@ -56,12 +33,106 @@ template <int dim, int degree, int n_points_1d>
       mapping, dof_handlers, constraints, quadratures, additional_data);
 }
 
-  template <int dim, int degree, int n_points_1d>
-  void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
-    SolutionType &vector) const
+
+
+// This function is entirely copied from tutorial 67. The only thing changed is
+// dim +2 which becomes dim+1 since here I don't have an energy equation
+template <int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::project(
+                                                const Function<dim> & function,
+                                                SolutionType &solution) const{
+    FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
+    MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
+        inverse(phi);
+    solution.zero_out_ghost_values();
+    for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell){
+        phi.reinit(cell);
+        for (unsigned int q = 0; q < phi.n_q_points; ++q)
+            phi.submit_dof_value(evaluate_function(function,
+                                                    phi.quadrature_point(q)),
+                                 q);
+        inverse.transform_from_q_points_to_basis(dim + 1,
+                                                 phi.begin_dof_values(),
+                                                 phi.begin_dof_values());
+        phi.set_dof_values(solution);
+    }                                                
+}
+
+
+
+template <int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
+  SolutionType &vector) const
+{
+  data.initialize_dof_vector(vector);
+}
+
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
+                                                      const double current_time,
+                                                      const SolutionType & src,
+                                                      SolutionType & dst) const{
+  // In this block I apply the nonlinear operator proper, consisting in (...)
   {
-    data.initialize_dof_vector(vector);
+      // This is for the output, I may use it later
+      // TimerOutput::Scope t(timer, "apply - integrals");
+
+      // This is for the boundary values, I will have to change it (TODO)
+      // for (auto &i : inflow_boundaries)
+      //   i.second->set_time(current_time);
+      // for (auto &i : subsonic_outflow_boundaries)
+      //   i.second->set_time(current_time);
+      data.loop()
+
+
   }
+  // In this block I apply the inverse matrix
+  {
+
+  }
+
+
+}
+
+
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
+        const MatrixFree<dim, Number> & data,
+        SolutionType & dst,
+        const SolutionType &src,
+        const std::pair<unsigned int, unsigned int> & cell_range) const{
+  // This is a class that provides all functions necessary to evaluate functions
+  // at quadrature points and cell integrations. 
+  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data);
+
+  // I comment this passage since for the moment I do not have body force, but I
+  // report it here below
+
+    //   Tensor<1, dim, VectorizedArray<Number>> constant_body_force;
+    // const Functions::ConstantFunction<dim> *constant_function =
+    //   dynamic_cast<Functions::ConstantFunction<dim> *>(body_force.get());
+
+    // if (constant_function)
+    //   constant_body_force = evaluate_function<dim, Number, dim>(
+    //     *constant_function, Point<dim, VectorizedArray<Number>>());
+
+
+  // This is a loop over the cells
+  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell){
+    phi.reinit(cell);
+    phi.gather_evaluate(src, EvaluationFlags::values);
+
+    // Loop over quadrature points
+    for( unsigned int q = 0; q < phi.n_q_points; ++q){
+      const auto w_q = phi.get_value(q);
+      phi
+    }
+
+  }
+
+
+
+}
 
 
 
