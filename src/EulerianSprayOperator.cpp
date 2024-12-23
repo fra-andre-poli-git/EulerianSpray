@@ -82,7 +82,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
       //   i.second->set_time(current_time);
       // for (auto &i : subsonic_outflow_boundaries)
       //   i.second->set_time(current_time);
-      data.loop()
+      data.loop();
 
 
   }
@@ -125,7 +125,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
     // Loop over quadrature points
     for( unsigned int q = 0; q < phi.n_q_points; ++q){
       const auto w_q = phi.get_value(q);
-      phi
+      
     }
 
   }
