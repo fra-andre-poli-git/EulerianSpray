@@ -16,4 +16,11 @@ constexpr int fe_degree = 2;
 constexpr int n_global_refinements = 7;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
 
+// I define this enumerator even thoug it has only one element since I may
+// decide to implement other types of numerical flux
+enum NumericalFlux{
+    local_lax_friedrichs,
+};
+constexpr NumericalFlux numerical_flux_type = local_lax_friedrichs;
+
 #endif

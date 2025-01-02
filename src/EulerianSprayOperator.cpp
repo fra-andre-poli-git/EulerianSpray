@@ -4,6 +4,9 @@
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
 
+template <int dim, int degree, int n_points_1d>
+EulerOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
+  TimerOutput &timer): timer(timer){}
 
 // This function is entirely copied from tutorial 67.
 template <int dim, int degree, int n_points_1d>
@@ -33,7 +36,41 @@ template <int dim, int degree, int n_points_1d>
       mapping, dof_handlers, constraints, quadratures, additional_data);
 }
 
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
+  const double current_time,
+  const SolutionType & src,
+  SolutionType & dst) const{
+  // In this block I apply the nonlinear operator proper, consisting in (...)
+  {
+      // This is for the output, I may use it later
+      // TimerOutput::Scope t(timer, "apply - integrals");
 
+      // This is for the boundary values, I will have to change it (TODO)
+      // for (auto &i : inflow_boundaries)
+      //   i.second->set_time(current_time);
+      // for (auto &i : subsonic_outflow_boundaries)
+      //   i.second->set_time(current_time);
+      data.loop(& EulerianSprayOperator::local_apply_cell,
+        & EulerianSprayOperator::local_apply_face,
+        & EulerianSprayOperator::local_apply_boundary_face,
+        this,
+        dst,
+        src,
+        true,
+        MatrixFree<dim, Number>::DataAccesOnFaces::values,
+        MatrixFree<dim, Number>::DataAccesOnFaces::values);
+  }
+  // In this block I apply the inverse matrix
+  {
+    // TimerOutput::Scope t(timer, "apply - inverse mass");
+    
+    data.cell_loop(& EulerianSprayOperator::local_apply_inverse_mass_matrix,
+                    this,
+                    dst,
+                    dst);
+  }
+}
 
 // This function is entirely copied from tutorial 67. The only thing changed is
 // dim +2 which becomes dim+1 since here I don't have an energy equation
@@ -62,37 +99,11 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::project(
 
 template <int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
-  SolutionType &vector) const
-{
+  SolutionType &vector) const{
   data.initialize_dof_vector(vector);
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
-                                                      const double current_time,
-                                                      const SolutionType & src,
-                                                      SolutionType & dst) const{
-  // In this block I apply the nonlinear operator proper, consisting in (...)
-  {
-      // This is for the output, I may use it later
-      // TimerOutput::Scope t(timer, "apply - integrals");
 
-      // This is for the boundary values, I will have to change it (TODO)
-      // for (auto &i : inflow_boundaries)
-      //   i.second->set_time(current_time);
-      // for (auto &i : subsonic_outflow_boundaries)
-      //   i.second->set_time(current_time);
-      data.loop();
-
-
-  }
-  // In this block I apply the inverse matrix
-  {
-
-  }
-
-
-}
 
 
 template<int dim, int degree, int n_points_1d>

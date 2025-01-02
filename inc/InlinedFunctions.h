@@ -27,7 +27,7 @@ Tensor<1, dim, Number> eulerian_spray_velocity(
 // TODO: why I use a return type a tensor of order 1 of tensors of order 1
 // and not a tensor of order two?
 template <int dim, typename Number>
-// TODO: understand deepely why I use DEAL_II_ALWAYS_INLINE
+// TODO: understand why I use DEAL_II_ALWAYS_INLINE
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Tensor<1, dim, Number>>
 eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables){
@@ -42,6 +42,46 @@ eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables){
             flux[e+1][d] = conserved_variables[e+1] * velocity[d];
     }
     return flux;
+}
+
+template <int n_components, int dim, typename Number>
+inline DEAL_II_ALWAYS_INLINE
+Tensor<1, n_components, Number>
+operator * ( const Tensor<1, n_components, Tensor<1, dim, Number>> & matrix,
+             const Tensor<1, dim, Number> & vector){
+    Tensor<1, n_components, Number> result;
+    for(unsigned int d = 0; d < n_components; ++d)
+        result[d] = matrix[d] * vector;
+    return result;
+}
+
+// This function returns the numerical flux already multiplied by the normal
+// vecotr. I am using local Lax-Friedrichs, but the structure can accept other
+// flux definitions through the switch.
+templat <int dim, typename Number>
+inline DEAL_II_ALWAYS_INLINE
+Tensor<1, dim + 1, Number>
+eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
+                              const Tensor<1, dim + 1, Number> & w_plus,
+                              const Tensor<1, dim, Number> & normal){
+    const auto velocity_minus = eulerian_spray_velocity<dim>(w_minus);
+    const auto velocity_plus = eulerian_spray_velocity<dim>(w_plus);
+
+    const auto flux_minus = eulerian_spray_flux<dim>(w_minus);
+    const auto flux_plus = eulerian_spray_flux<dim>(w_plus);
+
+    switch (numerical_flux_type){
+        case local_lax_friedrichs:{
+                // TODO: implement lambda for our local Lax Friedrichs flux
+                const auto lambda = 1;// std::max();
+                return 0.5 * (flux_minus * normal + flux_plus * normal) +
+                       0.5 * lambda * (w_minus - w_plus);
+        }
+        default:{
+            Assert(false, ExcNotImplemented());
+            return{};
+        }
+    }
 }
 
 
