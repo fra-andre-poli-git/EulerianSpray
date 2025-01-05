@@ -5,8 +5,8 @@
 #include<deal.II/base/vectorization.h>
 
 template <int dim, int degree, int n_points_1d>
-EulerOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
-  TimerOutput &timer): timer(timer){}
+EulerianSprayOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
+  TimerOutput & timer): timer(timer){}
 
 // This function is entirely copied from tutorial 67.
 template <int dim, int degree, int n_points_1d>
@@ -58,8 +58,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
         dst,
         src,
         true,
-        MatrixFree<dim, Number>::DataAccesOnFaces::values,
-        MatrixFree<dim, Number>::DataAccesOnFaces::values);
+        MatrixFree<dim, Number>::DataAccessOnFaces::values,
+        MatrixFree<dim, Number>::DataAccessOnFaces::values);
   }
   // In this block I apply the inverse matrix
   {
@@ -69,6 +69,72 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
                     this,
                     dst,
                     dst);
+  }
+}
+
+// This function does a stage of time integration. It is basically a 
+// EulerianSprayOperator::apply() 
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
+  const Number current_time,
+  const Number factor_solution,
+  const Number factor_ai,
+  const SolutionType & current_ri,
+  SolutionType & vec_ki,
+  SolutionType & solution,
+  SolutionType & next_ri) const{
+  {
+    TimerOutput::Scope t(timer, "rk_stage - integrals L_h");
+
+    // for (auto &i : inflow_boundaries)
+    //   i.second->set_time(current_time);
+    // for (auto &i : subsonic_outflow_boundaries)
+    //   i.second->set_time(current_time);
+
+    data.loop(&EulerianSprayOperator::local_apply_cell,
+              &EulerianSprayOperator::local_apply_face,
+              &EulerianSprayOperator::local_apply_boundary_face,
+              this,
+              vec_ki,
+              current_ri,
+              true,
+              MatrixFree<dim, Number>::DataAccessOnFaces::values,
+              MatrixFree<dim, Number>::DataAccessOnFaces::values);
+  }
+
+  {
+    TimerOutput::Scope t(timer, "rk_stage - inv mass + vec upd");
+    data.cell_loop(
+      &EulerianSprayOperator::local_apply_inverse_mass_matrix,
+      this,
+      next_ri,
+      vec_ki,
+      std::function<void(const unsigned int, const unsigned int)>(),
+      [&](const unsigned int start_range, const unsigned int end_range) {
+        const Number ai = factor_ai;
+        const Number bi = factor_solution;
+        if (ai == Number())
+          {
+            /* DEAL_II_OPENMP_SIMD_PRAGMA */
+            for (unsigned int i = start_range; i < end_range; ++i)
+              {
+                const Number k_i          = next_ri.local_element(i);
+                const Number sol_i        = solution.local_element(i);
+                solution.local_element(i) = sol_i + bi * k_i;
+              }
+          }
+        else
+          {
+            /* DEAL_II_OPENMP_SIMD_PRAGMA */
+            for (unsigned int i = start_range; i < end_range; ++i)
+              {
+                const Number k_i          = next_ri.local_element(i);
+                const Number sol_i        = solution.local_element(i);
+                solution.local_element(i) = sol_i + bi * k_i;
+                next_ri.local_element(i)  = sol_i + ai * k_i;
+              }
+          }
+      });
   }
 }
 

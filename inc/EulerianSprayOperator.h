@@ -60,7 +60,7 @@ class EulerianSprayOperator{
         std::array<double, 3> compute_errors(const Function<dim> & function,
             const SolutionType & solution) const;
 
-        double compute_cell_transport_speed(const SolutionTyper & solution)
+        double compute_cell_transport_speed(const SolutionType & solution)
             const;             
         void initialize_vector(SolutionType &vector) const;
 

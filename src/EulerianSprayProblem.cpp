@@ -12,11 +12,15 @@
 
 template <int dim>
 EulerianSprayProblem<dim>::EulerianSprayProblem():
-    fe(FE_DGQ<dim>(fe_degree),dim+1), //il +1 è perché ho momento nelle direzioni delle dimensioni + massa (a differenza di Eulero non ho energia)
-    mapping(fe_degree >= 2 ? fe_degree : 2), // mapping only works with a degree>=2
+    // Il +1 è perché ho momento nelle direzioni delle dimensioni + massa
+    // (a differenza di Eulero non ho energia)    
+    fe(FE_DGQ<dim>(fe_degree),dim+1),
+    // mapping only works with a degree>=2
+    mapping(fe_degree >= 2 ? fe_degree : 2),
     dof_handler(triangulation),
     time(0),
-    time_step(0)
+    time_step(0),
+		eulerianspray_operator(timer)
     {}
 
 template <int dim>
@@ -30,7 +34,6 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
             final_time = 0.5;
             break;
         }
-   
     }
 
     triangulation.refine_global(n_global_refinements);
@@ -67,7 +70,6 @@ void EulerianSprayProblem<dim>::run(){
     // Step 67 does this projecting the exact solution onto the solution vector
     // but I don't have an exact solution for every time step, therefore I use the initial solution
     eulerianspray_operator.project(InitialSolution<dim>(), solution);
-    std::cout<<solution<<std::endl;
 
     // Now I set the time step to be exactly the biggest to satisfy CFL condition
     time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;

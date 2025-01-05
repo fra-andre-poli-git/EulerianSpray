@@ -10,37 +10,39 @@
 #include<deal.II/fe/mapping_q.h>
 #include<deal.II/dofs/dof_handler.h>
 #include<deal.II/numerics/data_postprocessor.h>
+#include<deal.II/base/timer.h>
 #include<vector>
 
 
 
 template<int dim> class EulerianSprayProblem{
-    public:
+  public:
+    EulerianSprayProblem();
 
-        EulerianSprayProblem();
+    void run();
 
-        void run();
-    private:
-        // This is the function that makes grid and dofs
-        void make_grid_and_dofs();
-        //Here the version with p4est would need a different type: parallel::distributed::Triangulation<dim> triangulation;
+  private:
+    // This is the function that makes grid and dofs
+    void make_grid_and_dofs();
 
-        //If I decide to use MPI I will take the opportunity to define a ConditionalOStream here
+    //If I decide to use MPI I will take the opportunity to define a 
+    // ConditionalOStream here
+    
+    SolutionType solution;
+    Triangulation<dim> triangulation;
+    const FESystem<dim> fe;
+    MappingQ<dim> mapping;
+    DoFHandler<dim> dof_handler;
 
-        SolutionType solution;
-        Triangulation<dim> triangulation;
-        const FESystem<dim> fe;
-        MappingQ<dim> mapping;
-        DoFHandler<dim> dof_handler;
+    TimerOutput timer;
+    EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerianspray_operator;
 
-        EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerianspray_operator;
-
-        double final_time, time, time_step;
-        // Questo magari lo dichiaro meglio quando capisco cosa voglio fare di post processing
-        class Postprocessor : public DataPostprocessor<dim>{
-            public:
-                Postprocessor();
-        };
+    double final_time, time, time_step;
+// Questo magari lo dichiaro meglio quando capisco cosa voglio fare di post processing
+    class Postprocessor : public DataPostprocessor<dim>{
+        public:
+            Postprocessor();
+    };
 
 };
 

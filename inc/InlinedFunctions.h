@@ -58,7 +58,7 @@ operator * ( const Tensor<1, n_components, Tensor<1, dim, Number>> & matrix,
 // This function returns the numerical flux already multiplied by the normal
 // vecotr. I am using local Lax-Friedrichs, but the structure can accept other
 // flux definitions through the switch.
-templat <int dim, typename Number>
+template <int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Number>
 eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
