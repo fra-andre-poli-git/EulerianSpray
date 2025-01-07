@@ -161,6 +161,51 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::project(
     }                                                
 }
 
+template<int dim, int degree, int n_points_1d>
+std::array<double, 3>
+EulerianSprayOperator<dim, degree, n_points_1d>::compute_errors(
+  const Function<dim> & function,
+  const SolutionType & solution) const{
+  TimerOutput::Scope t(timer, "compute errors");
+  double errors_squared[3] = {};
+  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, 0, 0);
+
+  for (unsigned int cell = 0; cell<data.n_cell_batches(); ++cell){
+    phi.reinit(cell);
+    phi.gather_evaluate(solution, EvaluationFlags::values);
+    VectorizedArray<Number> local_errors_squared[3] = {};
+    for (unsigned int q = 0; q < phi.n_q_points; ++q){
+      const auto error = evaluate_function(function, phi.quadrature_point(q)) -
+        phi.get_value(q);
+      const auto JxW = phi.JxW(q);
+      local_errors_squared[0] += error[0] * error[0] * JxW;
+      for (unsigned int d = 0; d < dim; ++d)
+        local_errors_squared[1] += (error[d + 1] * error[d + 1]) * JxW;
+
+      local_errors_squared[2] += (error[dim+1] * error[dim + 1]) * JxW;
+    }
+  for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell); ++v)
+    for (unsigned int d = 0; d < 3; ++d)
+      errors_squared[d] += local_errors_squared[d][v];
+  }
+
+  Utilities::MPI::sum(errors_squared, MPI_COMM_WORLD, errors_squared);
+
+  std::array<double, 3> errors;
+  for ( unsigned int d = 0; d < 3; ++d)
+    errors[d] = std::sqrt(errors_squared[d]);
+
+  return errors;
+}
+
+
+// I will implement the following function, otherwise TODO erase it
+
+// template<int dim, int degree, int n_points_1d>
+// double
+// EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
+//   const SolutionType & solution) const;{
+// }
 
 
 template <int dim, int degree, int n_points_1d>
@@ -169,7 +214,28 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
   data.initialize_dof_vector(vector);
 }
 
+template<int dim, int degree, int n_points_1d>
+void
+EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix(
+  const MatrixFree<dim, Number> &                   data,
+            LinearAlgebra::distributed::Vector<Number> &      dst,
+            const LinearAlgebra::distributed::Vector<Number> &src,
+            const std::pair<unsigned int, unsigned int> &     cell_range) const{
+  // TODO: why 
+  FEEvaluation<dim, degree, /*degree + 1*/n_points_1d, dim + 1, Number>
+    phi(data, 0, 1);
+  MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
+    inverse(phi);
+  
+  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell){
+    phi.reinit(cell);
+    phi.read_dof_values(src);
 
+    inverse.apply(phi.begin_dof_values(), phi.begin_dof_values());
+
+    phi.set_dof_values(dst);
+  }
+}
 
 
 template<int dim, int degree, int n_points_1d>

@@ -12,7 +12,10 @@ constexpr unsigned int dimension=1;
 
 
 
-int main(/*int argc, char ** argv*/){
+int main(int argc, char ** argv){
+
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  
 	try{
       deallog.depth_console(0);
 
