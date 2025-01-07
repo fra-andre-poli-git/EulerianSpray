@@ -104,7 +104,6 @@ class EulerianSprayOperator{
             LinearAlgebra::distributed::Vector<Number> &      dst,
             const LinearAlgebra::distributed::Vector<Number> &src,
             const std::pair<unsigned int, unsigned int> &     face_range) const;
-
 };
 
 

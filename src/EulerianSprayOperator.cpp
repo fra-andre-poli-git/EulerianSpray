@@ -237,7 +237,6 @@ EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix
   }
 }
 
-
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
         const MatrixFree<dim, Number> & data,
@@ -249,7 +248,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
   FEEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data);
 
   // I comment this passage since for the moment I do not have body force, but I
-  // report it here below
+  // report it here since I may implement it.
 
     //   Tensor<1, dim, VectorizedArray<Number>> constant_body_force;
     // const Functions::ConstantFunction<dim> *constant_function =
@@ -259,7 +258,6 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
     //   constant_body_force = evaluate_function<dim, Number, dim>(
     //     *constant_function, Point<dim, VectorizedArray<Number>>());
 
-
   // This is a loop over the cells
   for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell){
     phi.reinit(cell);
@@ -268,14 +266,49 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
     // Loop over quadrature points
     for( unsigned int q = 0; q < phi.n_q_points; ++q){
       const auto w_q = phi.get_value(q);
-      
+      phi.submit_gradient(eulerian_spray_flux<dim>(w_q), q);
+      // as before, I comment this if and I don't write its body
+      // if (body_force.get() != nullptr)
     }
 
+    phi.integrate_scatter(/*((body_force.get() != nullptr) ?
+                                 EvaluationFlags::values :
+                                 EvaluationFlags::nothing) |*/
+                                 EvaluationFlags::gradients, dst);
   }
-
-
-
 }
+
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
+  const MatrixFree<dim, Number> &                   data,
+  LinearAlgebra::distributed::Vector<Number> &      dst,
+  const LinearAlgebra::distributed::Vector<Number> &src,
+  const std::pair<unsigned int, unsigned int> &     face_range) const{
+
+  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_m(data, true);
+  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_p(data,
+    false);
+  
+  for(unsigned int face = face_range.first; face < face_range.second; ++face){
+    phi_p.reinit(face);
+    phi_p.gather_evaluate(src, EvaluationFlags::values);
+
+    phi_m.reinit(face);
+    phi_m.gather_evaluate(src, EvaluationFlags::values);
+
+    for(unsigned int q = 0; q < phi_m.n_q_points; ++q){
+      const auto numerical_flux =
+        eulerian_spray_numerical_flux<dim>(phi_m.get_value(q),
+          phi_p.get_value(q),
+          phi_m.normal_vector(q));
+      phi_m.submit_value(-numerical_flux, q);
+      phi_p.submit_value(numerical_flux, q);
+    }
+    phi_p.integrate_scatter(EvaluationFlags::values, dst);
+    phi_m.integrate_scatter(EvaluationFlags::values, dst);
+  }
+}
+
 
 
 
