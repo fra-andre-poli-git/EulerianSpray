@@ -7,11 +7,13 @@
 #include<deal.II/base/utilities.h>
 #include<deal.II/numerics/vector_tools.h>
 
+
 #include<iostream>
 
 
 template <int dim>
 EulerianSprayProblem<dim>::EulerianSprayProblem():
+    pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
     // Il +1 è perché ho momento nelle direzioni delle dimensioni + massa
     // (a differenza di Eulero non ho energia)    
     fe(FE_DGQ<dim>(fe_degree),dim+1),
@@ -20,7 +22,8 @@ EulerianSprayProblem<dim>::EulerianSprayProblem():
     dof_handler(triangulation),
     time(0),
     time_step(0),
-		eulerianspray_operator(timer)
+    timer(pcout, TimerOutput::never, TimerOutput::wall_times),
+    eulerianspray_operator(timer)
     {}
 
 template <int dim>

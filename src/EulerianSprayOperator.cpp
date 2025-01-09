@@ -278,6 +278,9 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
   }
 }
 
+// This function performs the integration over the element's faces. The only
+// modification w.r.t. the tutorial 67 is the fact that here I am using a
+// different numerical flux, defined in InlinedFunctions.h
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
   const MatrixFree<dim, Number> &                   data,
@@ -309,8 +312,17 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
   }
 }
 
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
+  const MatrixFree<dim, Number> &                   data,
+  LinearAlgebra::distributed::Vector<Number> &      dst,
+  const LinearAlgebra::distributed::Vector<Number> &src,
+  const std::pair<unsigned int, unsigned int> &     face_range) const{
+  
+  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, true);
 
-
+  
+}
 
 // This is the implementation of the two helper function (defined here since
 // they are only used by EulerianSprayOperator methods)

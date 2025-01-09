@@ -11,6 +11,7 @@
 #include<deal.II/dofs/dof_handler.h>
 #include<deal.II/numerics/data_postprocessor.h>
 #include<deal.II/base/timer.h>
+#include<deal.II/base/conditional_ostream.h>
 #include<vector>
 
 
@@ -29,6 +30,7 @@ template<int dim> class EulerianSprayProblem{
     // ConditionalOStream here
     
     SolutionType solution;
+    ConditionalOStream pcout;
     Triangulation<dim> triangulation;
     const FESystem<dim> fe;
     MappingQ<dim> mapping;
