@@ -19,10 +19,16 @@ constexpr unsigned int testcase = 1;
 constexpr int fe_degree = 2;
 constexpr int n_global_refinements = 7;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
+enum RungeKuttaScheme
+{
+    stage_1
+};
+constexpr RungeKuttaScheme scheme = stage_1;
 
 // I define this enumerator even thoug it has only one element since I may
 // decide to implement other types of numerical flux
-enum NumericalFlux{
+enum NumericalFlux
+{
     local_lax_friedrichs,
 };
 constexpr NumericalFlux numerical_flux_type = local_lax_friedrichs;

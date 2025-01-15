@@ -218,8 +218,8 @@ template<int dim, int degree, int n_points_1d>
 void
 EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix(
   const MatrixFree<dim, Number> &                   data,
-            LinearAlgebra::distributed::Vector<Number> &      dst,
-            const LinearAlgebra::distributed::Vector<Number> &src,
+            SolutionType &      dst,
+            const SolutionType &src,
             const std::pair<unsigned int, unsigned int> &     cell_range) const{
   // TODO: why 
   FEEvaluation<dim, degree, /*degree + 1*/n_points_1d, dim + 1, Number>
@@ -284,8 +284,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
   const MatrixFree<dim, Number> &                   data,
-  LinearAlgebra::distributed::Vector<Number> &      dst,
-  const LinearAlgebra::distributed::Vector<Number> &src,
+  SolutionType &      dst,
+  const SolutionType & src,
   const std::pair<unsigned int, unsigned int> &     face_range) const{
 
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_m(data, true);
@@ -315,12 +315,23 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
   const MatrixFree<dim, Number> &                   data,
-  LinearAlgebra::distributed::Vector<Number> &      dst,
-  const LinearAlgebra::distributed::Vector<Number> &src,
+  SolutionType &      dst,
+  const SolutionType & src,
   const std::pair<unsigned int, unsigned int> &     face_range) const{
   
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, true);
 
+  for( unsigned int face = face_range.first; face < face_range.second; ++face){
+    phi.reinit(face);
+    phi.gather_evaluate(src, EvaluationFlags::values);
+    
+    for( unsigned int q = 0; q < phi.n_q_points; ++q){
+      const auto w_m = phi.get_value(q);
+      const auto normal = phi.normal_vector(q);
+
+      // TODO: understand my boundary conditions
+    }
+  }
   
 }
 

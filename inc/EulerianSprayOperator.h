@@ -81,10 +81,10 @@ class EulerianSprayOperator{
         std::unique_ptr<Function<dim>> body_force;
 
         void local_apply_inverse_mass_matrix(
-            const MatrixFree<dim, Number> &                   data,
-            LinearAlgebra::distributed::Vector<Number> &      dst,
-            const LinearAlgebra::distributed::Vector<Number> &src,
-            const std::pair<unsigned int, unsigned int> &     cell_range) const;
+            const MatrixFree<dim, Number> & data,
+            SolutionType & dst,
+            const SolutionType & src,
+            const std::pair<unsigned int, unsigned int> & cell_range) const;
 
 
         void local_apply_cell(const MatrixFree<dim, Number> & data,
@@ -95,14 +95,14 @@ class EulerianSprayOperator{
 
         void local_apply_face(
             const MatrixFree<dim, Number> &                   data,
-            LinearAlgebra::distributed::Vector<Number> &      dst,
-            const LinearAlgebra::distributed::Vector<Number> &src,
+            SolutionType &      dst,
+            const SolutionType & src,
             const std::pair<unsigned int, unsigned int> &     face_range) const;
             
         void local_apply_boundary_face(
             const MatrixFree<dim, Number> &                   data,
-            LinearAlgebra::distributed::Vector<Number> &      dst,
-            const LinearAlgebra::distributed::Vector<Number> &src,
+            SolutionType &      dst,
+            const SolutionType &src,
             const std::pair<unsigned int, unsigned int> &     face_range) const;
 };
 
