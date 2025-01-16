@@ -72,8 +72,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
   }
 }
 
-// This function does a stage of time integration. It is basically a 
-// EulerianSprayOperator::apply() 
+// This function performs one stage of Runge-Kutta integration. It is very
+// similar EulerianSprayOperator::apply() with an update of 
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
   const Number current_time,
@@ -82,7 +82,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
   const SolutionType & current_ri,
   SolutionType & vec_ki,
   SolutionType & solution,
-  SolutionType & next_ri) const{
+  SolutionType & next_ri) const
+{
   {
     TimerOutput::Scope t(timer, "rk_stage - integrals L_h");
 
@@ -104,6 +105,12 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
 
   {
     TimerOutput::Scope t(timer, "rk_stage - inv mass + vec upd");
+    // This is the sixth version of data.cell_loop. I highlight that the first
+    // of the two functions (which  corresponds to "operation_before_loop" is a 
+    // void function
+    // As a complete newbie I must note that [&] captures ALL the variables in
+    // in the scope by reference, therefore I can use "solution" in the body
+    // of the lamba function (look up on the slides)
     data.cell_loop(
       &EulerianSprayOperator::local_apply_inverse_mass_matrix,
       this,
@@ -143,22 +150,23 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
 template <int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::project(
                                                 const Function<dim> & function,
-                                                SolutionType &solution) const{
-    FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
-    MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
-        inverse(phi);
-    solution.zero_out_ghost_values();
-    for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell){
-        phi.reinit(cell);
-        for (unsigned int q = 0; q < phi.n_q_points; ++q)
-            phi.submit_dof_value(evaluate_function(function,
-                                                    phi.quadrature_point(q)),
-                                 q);
-        inverse.transform_from_q_points_to_basis(dim + 1,
-                                                 phi.begin_dof_values(),
-                                                 phi.begin_dof_values());
-        phi.set_dof_values(solution);
-    }                                                
+                                                SolutionType &solution) const
+{
+  FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
+  MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
+      inverse(phi);
+  solution.zero_out_ghost_values();
+  for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell){
+      phi.reinit(cell);
+      for (unsigned int q = 0; q < phi.n_q_points; ++q)
+          phi.submit_dof_value(evaluate_function(function,
+                                                  phi.quadrature_point(q)),
+                                q);
+      inverse.transform_from_q_points_to_basis(dim + 1,
+                                                phi.begin_dof_values(),
+                                                phi.begin_dof_values());
+      phi.set_dof_values(solution);
+  }                                                
 }
 
 template<int dim, int degree, int n_points_1d>

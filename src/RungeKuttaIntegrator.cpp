@@ -1,25 +1,22 @@
-#include"RungeKuttaIntegrator.h"
-#include<deal.II/base/time_stepping.h>
+//
 
+#include<array>
+#include"RungeKuttaIntegrator.h"
 RungeKuttaIntegrator::RungeKuttaIntegrator(const RungeKuttaScheme scheme)
 {
-  TimeStepping::runge_kutta_method rkm;
   switch(scheme)
   {
     // For the moment I use just Forward Euler
-    // TODO: implement second order RK scheme if not implemented by deal.ii
     case(stage_1):
     {
-      rkm = TimeStepping::FORWARD_EULER;
+      aij={0};
+      bi={1};
+      ci={0};      
       break;
     }
     default:
       AssertThrow(false, ExcNotImplemented());
-  }
-  TimeStepping::ExplicitRungeKutta<SolutionType> rk_integrator(rkm);
-  // Error: ExplicitRungeKutta does not have a get_coefficients(ai, bi, ci)
-  // method
-  //rk_integrator.get_coefficients(ai, bi, ci);
+  }  
 }
 
 unsigned int
@@ -28,33 +25,26 @@ RungeKuttaIntegrator::n_stages() const
   return bi.size();
 }
 
+// The following implementation may be very general to all explicit Runge Kutta
+// schemes, but can be also very expansive if the method is a low storage one,
+// since in this implementation I mantain al Ki up to the computation of the new
+// solution
 template <typename VectorType, typename Operator>
-void RungeKuttaIntegrator::perform_time_step(const Operator % pde_operator,
+void RungeKuttaIntegrator::perform_time_step(const Operator & pde_operator,
   const double current_time,
   const double time_step,
   VectorType & solution,
-  VectorType & vec_ri,
-  VectorTyper & vec_ki) const
+  VectorType & previous) const
 {
-  AssertDimension(ai.size() + 1, bi.size());
-
-  pde_operator.perform_stage(current_time,
-    bi[0] * time_step,
-    ai[0] * time_step.
-    solution,
-    vec_ri,
-    solution,
-    vec_ri);
-  
-  for( unsigned int stage = 1; stage < bi.size(); ++stage)
+  no_stages = this->n_stages();
+  std::array<VectorType, no_stages + 1> Ki;
+  pde_operator.perform_stage()
+  Ki[0] = pde_operator
+  for(unsigned int stage = 1; stage =< this->n_stages(); stage ++)
   {
-    const double c_i = ci[stage];
-    pde_operator.perform_stage(current_time + c_i * time_step,
-      bi[stage] * time_step,
-      (stage == bi.size() - 1 ? 0 : ai[stage] * time_step),
-      vec_ri,
-      vec_ki,
-      solution,
-      vec_ri);
+
   }
+
+
+
 }
