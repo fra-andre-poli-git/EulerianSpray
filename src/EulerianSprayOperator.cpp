@@ -377,7 +377,7 @@ evaluate_function(const Function<dim> &                      function,
 }
 
 
-//Instantiation
+//Instantiations of the template
 template class EulerianSprayOperator<1, 2, 4>;
 template class EulerianSprayOperator<2, 2, 4>;
 template class EulerianSprayOperator<3, 2, 4>;

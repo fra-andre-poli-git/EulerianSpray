@@ -1,6 +1,6 @@
 #include"EulerianSprayProblem.h"
 #include"TypesDefinition.h"
-
+#include"RungeKuttaIntegrator.h"
 #include"InitialSolution.h"
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/fe/fe_dgq.h>
@@ -56,45 +56,57 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
 
 
 template <int dim>
-void EulerianSprayProblem<dim>::run(){
-    //Qua nello step 67 c'è un pezzetto per quando si usa MPI
+void EulerianSprayProblem<dim>::run()
+{
+  //Qua nello step 67 c'è un pezzetto per quando si usa MPI
 
-    make_grid_and_dofs();
+  make_grid_and_dofs();
 
-    //This small chunk aims at finding h, the smallest distance between two nodes
-    double min_vertex_distance = std::numeric_limits<double>::max();
-    for(const auto & cell : triangulation.active_cell_iterators()){
-        min_vertex_distance =
-            std::min(min_vertex_distance, cell->minimum_vertex_distance());
+  const RungeKuttaIntegrator integrator(scheme);
+
+  SolutionType rk_register1;
+  SolutionType rk_register2;
+  rk_register1.reinit(solution);
+  rk_register2.reinit(solution);
+
+  // Here I should initialize the solution
+  // Step 67 does this projecting the exact solution onto the solution vector
+  // but I don't have an exact solution for every time step, therefore I use the initial solution
+  eulerianspray_operator.project(InitialSolution<dim>(), solution);
+
+  //This small chunk aims at finding h, the smallest distance between two nodes
+  double min_vertex_distance = std::numeric_limits<double>::max();
+  for(const auto & cell : triangulation.active_cell_iterators()){
+      min_vertex_distance =
+          std::min(min_vertex_distance, cell->minimum_vertex_distance());
+  }
+  // with MPI here I have to make the minimum over all processors
+
+
+  // Now I set the time step to be exactly the biggest to satisfy CFL condition
+  time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;
+  std::cout << "Time step: " << time_step << std::endl;
+
+  // This is the time loop
+  time = 0;
+  unsigned int timestep_number = 0;
+  while(time < final_time - 1e-12)
+  {
+    ++timestep_number;
+    // Here the integration in time is performed by the integrator
+    {
+      integrator.perform_time_step(eulerianspray_operator,
+        time,
+        time_step,
+        solution,
+        rk_register1,
+        rk_register2);
     }
-    // with MPI here I have to make the minimum over all processors
-
-    // Here I should initialize the solution
-    // Step 67 does this projecting the exact solution onto the solution vector
-    // but I don't have an exact solution for every time step, therefore I use the initial solution
-    eulerianspray_operator.project(InitialSolution<dim>(), solution);
-
-    // Now I set the time step to be exactly the biggest to satisfy CFL condition
-    time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;
-    std::cout << "Time step: " << time_step << std::endl;
-
-    // This is the time loop
-    time = 0; // I don't know why time is defined in the class, maybe it will be useful in other function
-    unsigned int timestep_number = 0;
-    while(time < final_time - 1e-12){
-        timestep_number++;
-
-        // Here the integration in time is performed by a class called integrator
-
-
-
-        time += time_step;
-    }
-
-
+    time += time_step;
+  }
 }
 
-// Instantiation of the template
+// Instantiations of the template
 template class EulerianSprayProblem<1>;
 template class EulerianSprayProblem<2>;
 template class EulerianSprayProblem<3>;

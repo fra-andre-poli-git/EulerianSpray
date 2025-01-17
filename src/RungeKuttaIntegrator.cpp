@@ -1,6 +1,7 @@
 //
 #include"RungeKuttaIntegrator.h"
 #include"TypesDefinition.h"
+#include"EulerianSprayOperator.h"
 #include<deal.II/base/time_stepping.h>
 RungeKuttaIntegrator::RungeKuttaIntegrator(const RungeKuttaScheme scheme)
 {
@@ -81,3 +82,28 @@ void RungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
                                   vec_ri);
     }
 }
+
+//Instantiations of the template function
+template void RungeKuttaIntegrator::perform_time_step<SolutionType,
+  EulerianSprayOperator<1,2,4>>(const EulerianSprayOperator<1,2,4> &,
+    const double,
+    const double,
+    SolutionType &,
+    SolutionType &,
+    SolutionType &) const;
+
+template void RungeKuttaIntegrator::perform_time_step<SolutionType,
+  EulerianSprayOperator<2,2,4>>(const EulerianSprayOperator<2,2,4> &,
+    const double,
+    const double,
+    SolutionType &,
+    SolutionType &,
+    SolutionType &) const;
+
+template void RungeKuttaIntegrator::perform_time_step<SolutionType,
+  EulerianSprayOperator<3,2,4>>(const EulerianSprayOperator<3,2,4> &,
+    const double,
+    const double,
+    SolutionType &,
+    SolutionType &,
+    SolutionType &) const;
