@@ -102,6 +102,7 @@ void EulerianSprayProblem<dim>::run()
         rk_register1,
         rk_register2);
     }
+    std::cout<<"Performed timestep at time: "<<time<<std::endl;
     time += time_step;
   }
 }

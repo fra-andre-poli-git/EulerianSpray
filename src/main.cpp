@@ -1,13 +1,14 @@
 /*
-	Advanced Programming for Scientific Computing project and thesis work of Francesco Andreotti, PoliMi
-	The reference for this program is Step-67 tutorial, even though I will try to rewrite it on my own
+	Advanced Programming for Scientific Computing project and thesis work of 
+  Francesco Andreotti, PoliMi
+	The reference for this program is Step-67 of deal.ii tutorials.
 */
 #include<iostream>
 #include"EulerianSprayProblem.h"
 
 // For the moment dimension will be a global const, 
 
-constexpr unsigned int dimension=1;
+constexpr unsigned int dimension=2;
 
 
 
