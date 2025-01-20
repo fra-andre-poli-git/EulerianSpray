@@ -2,6 +2,7 @@
 #include"TypesDefinition.h"
 #include"RungeKuttaIntegrator.h"
 #include"InitialSolution.h"
+#include"InlinedFunctions.h"
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/fe/fe_dgq.h>
 #include<deal.II/base/utilities.h>
@@ -105,6 +106,62 @@ void EulerianSprayProblem<dim>::run()
     std::cout<<"Performed timestep at time: "<<time<<std::endl;
     time += time_step;
   }
+}
+
+template <int dim>
+void EulerianSprayProblem<dim>::Postprocessor::evaluate_vector_field(
+  const DataPostprocessorInputs::Vector<dim> &inputs,
+  std::vector<Vector<double>> &computed_quantities) const
+{
+  const unsigned int n_evaluation_points = inputs.solution_values.size();
+
+  Assert(computed_quantities.size() == n_evaluation_points, ExcInternalError());
+  Assert(inputs.solution_values[0].size() == dim + 1, ExcInternalError());
+
+  for(unsigned int p = 0; p < n_evaluation_points; ++p)
+  {
+    Tensor<1, dim + 1> solution;
+    for(unsigned int d = 0; d < dim +1; ++d)
+      solution[d] = inputs.solution_values[p](d);
+    const double density = solution[0];
+    const Tensor<1, dim> velocity = eulerian_spray_velocity<dim>(solution);
+    
+    for(unsigned int d = 0; d<dim; ++d)
+      computed_quantities[p](d) = velocity[d];
+  }
+}
+
+template<int dim>
+std::vector<std::string> EulerianSprayProblem<dim>::Postprocessor::get_names()
+  const
+{
+  std::vector<std::string> names;
+  for(unsigned int d = 0; d < dim; ++d)
+    names.emplace_back("velocity");
+
+  return names;
+}
+
+template<int dim>
+std::vector<DataComponentInterpretation::DataComponentInterpretation>
+  EulerianSprayProblem<dim>::Postprocessor::get_data_component_interpretation()
+  const
+{
+  std::vector<DataComponentInterpretation::DataComponentInterpretation>
+    interpretation;
+
+  for(unsigned int d = 0; d < dim; ++d)
+    interpretation.push_back(
+      DataComponentInterpretation::component_is_part_of_vector);
+
+  return interpretation;
+}
+
+template<int dim>
+UpdateFlags
+EulerianSprayProblem<dim>::Postprocessor::get_needed_update_flags() const
+{
+  return update_values;
 }
 
 // Instantiations of the template

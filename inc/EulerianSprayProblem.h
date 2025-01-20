@@ -40,12 +40,24 @@ template<int dim> class EulerianSprayProblem{
     EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerianspray_operator;
 
     double final_time, time, time_step;
-// Questo magari lo dichiaro meglio quando capisco cosa voglio fare di post processing
+// 
     class Postprocessor : public DataPostprocessor<dim>{
-        public:
-            Postprocessor();
-    };
+      public:
+        Postprocessor();
 
+        virtual void evaluate_vector_field(
+          const DataPostprocessorInputs::Vector<dim> &inputs,
+          std::vector<Vector<double>> &computed_quantities) const override;
+
+        virtual std::vector<std::string> get_names() const override;
+
+        virtual std::vector<
+          DataComponentInterpretation::DataComponentInterpretation>
+          get_data_component_interpretation() const override;
+
+        virtual UpdateFlags get_needed_update_flags() const override;
+
+    };
 };
 
 #endif
