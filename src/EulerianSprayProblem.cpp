@@ -4,9 +4,11 @@
 #include"InitialSolution.h"
 #include"InlinedFunctions.h"
 #include<deal.II/grid/grid_generator.h>
+#include<deal.II/grid/tria_description.h>
 #include<deal.II/fe/fe_dgq.h>
 #include<deal.II/base/utilities.h>
 #include<deal.II/numerics/vector_tools.h>
+#include<deal.II/numerics/data_out.h>
 
 
 #include<iostream>
@@ -35,7 +37,7 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
             GridGenerator::hyper_cube(triangulation, -1., 1.);
             // I don't know why, but in step 67 it refines the mesh two times previously than n_global_refinement
             //triangulation.refine_global(2);
-            final_time = 0.5;
+            final_time = parameter_final_time;
             break;
         }
     }
@@ -54,7 +56,53 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs(){
              << std::endl;
 }
 
+template<int dim>
+void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
+{
+  {
+    TimerOutput::Scope t(timer, "output");
 
+    Postprocessor postprocessor;
+    DataOut<dim> data_out;
+
+    DataOutBase::VtkFlags flags;
+    // flags.write_higher_order_cells = true;
+    data_out.set_flags(flags);
+
+    data_out.attach_dof_handler(dof_handler);
+    {
+      std::vector<std::string> names;
+      names.emplace_back("density");
+      for(unsigned int d = 0; d<dim; ++d)
+        names.emplace_back("momentum");
+      
+      std::vector<DataComponentInterpretation::DataComponentInterpretation>
+        interpretation;
+      interpretation.push_back(
+        DataComponentInterpretation::component_is_scalar);
+      for(unsigned int d = 0; d < dim; ++d)
+        interpretation.push_back(
+          DataComponentInterpretation::component_is_part_of_vector);
+
+      data_out.add_data_vector(dof_handler, solution, names, interpretation);
+    }
+    data_out.add_data_vector(solution, postprocessor);
+
+    Vector<double> mpi_owner(triangulation.n_active_cells());
+    mpi_owner = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
+    data_out.add_data_vector(mpi_owner, "owner");
+
+    data_out.build_patches(mapping,
+      fe.degree,
+      DataOut<dim>::curved_inner_cells);
+
+    const std::string filename = 
+      "./results/solution_" +
+        Utilities::int_to_string(result_number, 3) + "vtu";
+
+    data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
+  }
+}
 
 template <int dim>
 void EulerianSprayProblem<dim>::run()
@@ -104,9 +152,19 @@ void EulerianSprayProblem<dim>::run()
         rk_register2);
     }
     std::cout<<"Performed timestep at time: "<<time<<std::endl;
+    if (static_cast<int>(time / snapshot) !=
+              static_cast<int>((time - time_step) / snapshot) ||
+            time >= final_time - 1e-12)
+          output_results(
+            static_cast<unsigned int>(std::round(time / snapshot)));
     time += time_step;
   }
+  timer.print_wall_time_statistics(MPI_COMM_WORLD);
+  pcout<<std::endl;
 }
+
+template <int dim>
+EulerianSprayProblem<dim>::Postprocessor::Postprocessor(){}
 
 template <int dim>
 void EulerianSprayProblem<dim>::Postprocessor::evaluate_vector_field(

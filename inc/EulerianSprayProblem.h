@@ -26,11 +26,12 @@ template<int dim> class EulerianSprayProblem{
     // This is the function that makes grid and dofs
     void make_grid_and_dofs();
 
-    //If I decide to use MPI I will take the opportunity to define a 
-    // ConditionalOStream here
+    void output_results(const unsigned int result_number);
     
     SolutionType solution;
+
     ConditionalOStream pcout;
+
     Triangulation<dim> triangulation;
     const FESystem<dim> fe;
     MappingQ<dim> mapping;

@@ -8,32 +8,50 @@ template <int dim, int degree, int n_points_1d>
 EulerianSprayOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
   TimerOutput & timer): timer(timer){}
 
-// This function is entirely copied from tutorial 67.
+// For the initialization of the Euler operator, we set up the MatrixFree
+// variable contained in the class. This can be done given a mapping to
+// describe possible curved boundaries as well as a DoFHandler object
+// describing the degrees of freedom. Since we use a discontinuous Galerkin
+// discretization in this tutorial program where no constraints are imposed
+// strongly on the solution field, we do not need to pass in an
+// AffineConstraints object and rather use a dummy for the
+// construction. With respect to quadrature, we want to select two different
+// ways of computing the underlying integrals: The first is a flexible one,
+// based on a template parameter `n_points_1d` (that will be assigned the
+// `n_q_points_1d` value specified at the top of this file). More accurate
+// integration is necessary to avoid the aliasing problem due to the
+// variable coefficients in the Euler operator. The second less accurate
+// quadrature formula is a tight one based on `fe_degree+1` and needed for
+// the inverse mass matrix. While that formula provides an exact inverse
+// only on affine element shapes and not on deformed elements, it enables
+// the fast inversion of the mass matrix by tensor product techniques,
+// necessary to ensure optimal computational efficiency overall.
 template <int dim, int degree, int n_points_1d>
   void EulerianSprayOperator<dim, degree, n_points_1d>::reinit(
     const Mapping<dim> &   mapping,
-    const DoFHandler<dim> &dof_handler){
-    const std::vector<const DoFHandler<dim> *> dof_handlers = {&dof_handler};
-    const AffineConstraints<double>            dummy;
-    const std::vector<const AffineConstraints<double> *> constraints = {&dummy};
-    const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_q_points_1d),
-                                                    QGauss<1>(fe_degree + 1)};
+    const DoFHandler<dim> &dof_handler)
+{
+  const std::vector<const DoFHandler<dim> *> dof_handlers = {&dof_handler};
+  const AffineConstraints<double> dummy;
+  const std::vector<const AffineConstraints<double> *> constraints = {&dummy};
+  const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_q_points_1d),
+                                                  QGauss<1>(fe_degree + 1)};
 
-    typename MatrixFree<dim, Number>::AdditionalData additional_data;
-    additional_data.mapping_update_flags =
-      (update_gradients | update_JxW_values | update_quadrature_points |
-       update_values);
-    additional_data.mapping_update_flags_inner_faces =
-      (update_JxW_values | update_quadrature_points | update_normal_vectors |
-       update_values);
-    additional_data.mapping_update_flags_boundary_faces =
-      (update_JxW_values | update_quadrature_points | update_normal_vectors |
-       update_values);
-    additional_data.tasks_parallel_scheme =
-      MatrixFree<dim, Number>::AdditionalData::none;
+  typename MatrixFree<dim, Number>::AdditionalData additional_data;
+  additional_data.mapping_update_flags =
+    (update_gradients | update_JxW_values | update_quadrature_points |
+      update_values);
+  additional_data.mapping_update_flags_inner_faces =
+    (update_JxW_values | update_quadrature_points | update_normal_vectors |
+      update_values);
+  additional_data.mapping_update_flags_boundary_faces =
+    (update_JxW_values | update_quadrature_points | update_normal_vectors |
+      update_values);
+  additional_data.tasks_parallel_scheme =
+    MatrixFree<dim, Number>::AdditionalData::none;
 
-    data.reinit(
-      mapping, dof_handlers, constraints, quadratures, additional_data);
+  data.reinit(
+    mapping, dof_handlers, constraints, quadratures, additional_data);
 }
 
 template<int dim, int degree, int n_points_1d>
@@ -218,7 +236,8 @@ EulerianSprayOperator<dim, degree, n_points_1d>::compute_errors(
 
 template <int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
-  SolutionType &vector) const{
+  SolutionType &vector) const
+{
   data.initialize_dof_vector(vector);
 }
 
@@ -267,7 +286,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
     //     *constant_function, Point<dim, VectorizedArray<Number>>());
 
   // This is a loop over the cells
-  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell){
+  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+  {
     phi.reinit(cell);
     phi.gather_evaluate(src, EvaluationFlags::values);
 
@@ -279,9 +299,9 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
       // if (body_force.get() != nullptr)
     }
 
-    phi.integrate_scatter(/*((body_force.get() != nullptr) ?
-                                 EvaluationFlags::values :
-                                 EvaluationFlags::nothing) |*/
+    phi.integrate_scatter((/*(body_force.get() != nullptr) ?
+                                 EvaluationFlags::values :*/
+                                 EvaluationFlags::nothing) |
                                  EvaluationFlags::gradients, dst);
   }
 }
@@ -291,11 +311,11 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
 // different numerical flux, defined in InlinedFunctions.h
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
-  const MatrixFree<dim, Number> &                   data,
-  SolutionType &      dst,
+  const MatrixFree<dim, Number> & data,
+  SolutionType & dst,
   const SolutionType & src,
-  const std::pair<unsigned int, unsigned int> &     face_range) const{
-
+  const std::pair<unsigned int, unsigned int> & face_range) const
+{
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_m(data, true);
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_p(data,
     false);
