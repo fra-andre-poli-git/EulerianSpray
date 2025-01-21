@@ -91,6 +91,7 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
 
       data_out.add_data_vector(dof_handler, solution, names, interpretation);
     }
+
     data_out.add_data_vector(solution, postprocessor);
 
 
@@ -104,7 +105,7 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
 
     const std::string filename = 
       "./results/solution_" +
-        Utilities::int_to_string(result_number, 3) + "vtu";
+        Utilities::int_to_string(result_number, 3) + ".vtu";
 
     data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
   }
