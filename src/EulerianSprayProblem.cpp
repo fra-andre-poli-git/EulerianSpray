@@ -1,7 +1,7 @@
 #include"EulerianSprayProblem.h"
 #include"TypesDefinition.h"
 #include"RungeKuttaIntegrator.h"
-#include"InitialSolution.h"
+#include"Functions.h"
 #include"InlinedFunctions.h"
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/grid/tria_description.h>
@@ -30,30 +30,35 @@ EulerianSprayProblem<dim>::EulerianSprayProblem():
     {}
 
 template <int dim>
-void EulerianSprayProblem<dim>::make_grid_and_dofs(){
-    // In step 67 this is a global variable. I may opt for a solution like Felotti's one, which uses a parameter memeber and make it parameters.testcase
-    switch(testcase){
-        case 1:{
-            GridGenerator::hyper_cube(triangulation, -1., 1.);
-            // I don't know why, but in step 67 it refines the mesh two times previously than n_global_refinement
-            //triangulation.refine_global(2);
-            final_time = parameter_final_time;
-            break;
-        }
+void EulerianSprayProblem<dim>::make_grid_and_dofs()
+{
+  // In step 67 this is a global variable. I may opt for a solution like 
+  // Felotti's one, which uses a parameter memeber and make it
+  // parameters.testcase
+  switch(testcase)
+  {
+    case 1:{
+        GridGenerator::hyper_cube(triangulation, -1., 1.);
+        // I don't know why, but in step 67 it refines the mesh two times 
+        // previously than n_global_refinement
+        //triangulation.refine_global(2);
+        final_time = parameter_final_time;
+        break;
     }
+  }
 
-    triangulation.refine_global(n_global_refinements);
+  triangulation.refine_global(n_global_refinements);
 
-    dof_handler.distribute_dofs(fe);
+  dof_handler.distribute_dofs(fe);
 
-    eulerianspray_operator.reinit(mapping, dof_handler);
-    eulerianspray_operator.initialize_vector(solution);
+  eulerianspray_operator.reinit(mapping, dof_handler);
+  eulerianspray_operator.initialize_vector(solution);
 
-    std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
-             << " ( = " << (dim + 1) << " [vars] x "
-             << triangulation.n_global_active_cells() << " [cells] x "
-             << Utilities::pow(fe_degree + 1, dim) << " [dofs/cell/var] )"
-             << std::endl;
+  std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
+            << " ( = " << (dim + 1) << " [vars] x "
+            << triangulation.n_global_active_cells() << " [cells] x "
+            << Utilities::pow(fe_degree + 1, dim) << " [dofs/cell/var] )"
+            << std::endl;
 }
 
 template<int dim>
@@ -66,7 +71,7 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
     DataOut<dim> data_out;
 
     DataOutBase::VtkFlags flags;
-    // flags.write_higher_order_cells = true;
+    flags.write_higher_order_cells = true; // TODO: a che serve?
     data_out.set_flags(flags);
 
     data_out.attach_dof_handler(dof_handler);
@@ -88,6 +93,7 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
     }
     data_out.add_data_vector(solution, postprocessor);
 
+
     Vector<double> mpi_owner(triangulation.n_active_cells());
     mpi_owner = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
     data_out.add_data_vector(mpi_owner, "owner");
@@ -107,7 +113,19 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
 template <int dim>
 void EulerianSprayProblem<dim>::run()
 {
-  //Qua nello step 67 c'è un pezzetto per quando si usa MPI
+  {
+    const unsigned int n_vect_number = VectorizedArray<Number>::size();
+    const unsigned int n_vect_bits   = 8 * sizeof(Number) * n_vect_number;
+
+    pcout << "Running with "
+          << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
+          << " MPI processes" << std::endl;
+    pcout << "Vectorization over " << n_vect_number << ' '
+          << (std::is_same<Number, double>::value ? "doubles" : "floats")
+          << " = " << n_vect_bits << " bits ("
+          << Utilities::System::get_current_vectorization_level() << ')'
+          << std::endl;
+    }
 
   make_grid_and_dofs();
 
@@ -130,12 +148,17 @@ void EulerianSprayProblem<dim>::run()
           std::min(min_vertex_distance, cell->minimum_vertex_distance());
   }
   // with MPI here I have to make the minimum over all processors
-
+  min_vertex_distance =
+    Utilities::MPI::min(min_vertex_distance, MPI_COMM_WORLD);
 
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
   time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;
-  std::cout << "Time step: " << time_step << std::endl;
+  pcout << "Time step size: " << time_step
+    << ", minimal h: " << min_vertex_distance
+    << std::endl
+    << std::endl;
 
+    output_results(0);
   // This is the time loop
   time = 0;
   unsigned int timestep_number = 0;

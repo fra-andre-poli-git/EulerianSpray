@@ -7,7 +7,8 @@
 #include"EulerianSprayProblem.h"
 
 // For the moment dimension will be a global const, 
-
+// It must be 2, since the functions of the output are not meant to be used in
+// dimension 1.
 constexpr unsigned int dimension=2;
 
 
