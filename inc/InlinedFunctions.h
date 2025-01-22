@@ -11,15 +11,15 @@
 template< int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim, Number> eulerian_spray_velocity(
-    const Tensor<1, dim + 1, Number> & conserved_variables){
+  const Tensor<1, dim + 1, Number> & conserved_variables)
+{
+  const Number inverse_density = Number(1.) / conserved_variables[0];
 
-    const Number inverse_density = Number(1.) / conserved_variables[0];
-
-    Tensor<1, dim, Number> velocity;
-    for(unsigned int d = 0; d < dim; d++)
-        velocity[d] = conserved_variables[1+d] * inverse_density;
-    
-    return velocity;
+  Tensor<1, dim, Number> velocity;
+  for(unsigned int d = 0; d < dim; d++)
+    velocity[d] = conserved_variables[1+d] * inverse_density;
+  
+  return velocity;
 }
 
 // This template function returns the Eulerian spray flux (in analogy to Euler
@@ -30,29 +30,32 @@ template <int dim, typename Number>
 // TODO: understand why I use DEAL_II_ALWAYS_INLINE
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Tensor<1, dim, Number>>
-eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables){
-    const Tensor<1, dim, Number> velocity =
-        eulerian_spray_velocity<dim>(conserved_variables);
+eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables)
+{
+  const Tensor<1, dim, Number> velocity =
+    eulerian_spray_velocity<dim>(conserved_variables);
 
-    Tensor<1, dim + 1, Tensor<1, dim, Number>> flux;
-    for(unsigned int d = 0; d < dim; ++d){
-        // The first row is the vector of momenti in the dim directions
-        flux[0][d] = conserved_variables[1 + d];
-        for( unsigned int e = 0; e < dim; ++e)
-            flux[e+1][d] = conserved_variables[e+1] * velocity[d];
-    }
-    return flux;
+  Tensor<1, dim + 1, Tensor<1, dim, Number>> flux;
+  for(unsigned int d = 0; d < dim; ++d)
+  {
+    // The first row is the vector of momenti in the dim directions
+    flux[0][d] = conserved_variables[1 + d];
+    for( unsigned int e = 0; e < dim; ++e)
+      flux[e+1][d] = conserved_variables[e+1] * velocity[d];
+  }
+  return flux;
 }
 
 template <int n_components, int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, n_components, Number>
 operator * ( const Tensor<1, n_components, Tensor<1, dim, Number>> & matrix,
-             const Tensor<1, dim, Number> & vector){
-    Tensor<1, n_components, Number> result;
-    for(unsigned int d = 0; d < n_components; ++d)
-        result[d] = matrix[d] * vector;
-    return result;
+  const Tensor<1, dim, Number> & vector)
+{
+  Tensor<1, n_components, Number> result;
+  for(unsigned int d = 0; d < n_components; ++d)
+    result[d] = matrix[d] * vector;
+  return result;
 }
 
 // This function returns the numerical flux already multiplied by the normal
@@ -62,26 +65,29 @@ template <int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Number>
 eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
-                              const Tensor<1, dim + 1, Number> & w_plus,
-                              const Tensor<1, dim, Number> & normal){
-    const auto velocity_minus = eulerian_spray_velocity<dim>(w_minus);
-    const auto velocity_plus = eulerian_spray_velocity<dim>(w_plus);
+  const Tensor<1, dim + 1, Number> & w_plus,
+  const Tensor<1, dim, Number> & normal)
+{
+  const auto velocity_minus = eulerian_spray_velocity<dim>(w_minus);
+  const auto velocity_plus = eulerian_spray_velocity<dim>(w_plus);
 
-    const auto flux_minus = eulerian_spray_flux<dim>(w_minus);
-    const auto flux_plus = eulerian_spray_flux<dim>(w_plus);
+  const auto flux_minus = eulerian_spray_flux<dim>(w_minus);
+  const auto flux_plus = eulerian_spray_flux<dim>(w_plus);
 
-    switch (numerical_flux_type){
-        case local_lax_friedrichs:{
-                // TODO: implement lambda for our local Lax Friedrichs flux
-                const auto lambda = 1;// std::max();
-                return 0.5 * (flux_minus * normal + flux_plus * normal) +
-                       0.5 * lambda * (w_minus - w_plus);
-        }
-        default:{
-            Assert(false, ExcNotImplemented());
-            return{};
-        }
+  switch (numerical_flux_type)
+  {
+    case local_lax_friedrichs:
+    {
+      // TODO: implement lambda for our local Lax Friedrichs flux
+      const auto lambda = 1;// std::max();
+      return 0.5 * (flux_minus * normal + flux_plus * normal) +
+              0.5 * lambda * (w_minus - w_plus);
     }
+    default:{
+      Assert(false, ExcNotImplemented());
+      return{};
+    }
+  }
 }
 
 
