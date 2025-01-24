@@ -45,6 +45,13 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
         final_time = parameter_final_time;
         break;
     }
+    case 2:{}
+    case 3:
+    {
+      GridGenerator::hyper_cube(triangulation, -0.5,0.5);
+      final_time = parameter_final_time;
+      break;
+    }
   }
 
   triangulation.refine_global(n_global_refinements);
@@ -247,6 +254,6 @@ EulerianSprayProblem<dim>::Postprocessor::get_needed_update_flags() const
 }
 
 // Instantiations of the template
-template class EulerianSprayProblem<1>;
+//template class EulerianSprayProblem<1>;
 template class EulerianSprayProblem<2>;
 template class EulerianSprayProblem<3>;

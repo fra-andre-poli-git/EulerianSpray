@@ -22,4 +22,7 @@ class FinalSolution : public Function<dim>
       const override;
 };
 
+// template<int dim>
+// class ExternalFlow : public Function<dim>
+
 #endif

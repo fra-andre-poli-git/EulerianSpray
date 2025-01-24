@@ -56,10 +56,12 @@ template <int dim, int degree, int n_points_1d>
 
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
-  const double current_time,
+  const Number current_time,
   const SolutionType & src,
-  SolutionType & dst) const{
-  // In this block I apply the nonlinear operator proper, consisting in (...)
+  SolutionType & dst) const
+{
+  (void) current_time;
+  // In this block I apply the nonlinear operator proper
   {
       // This is for the output, I may use it later
       // TimerOutput::Scope t(timer, "apply - integrals");
@@ -102,6 +104,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
   SolutionType & solution,
   SolutionType & next_ri) const
 {
+  (void) current_time;
   {
     TimerOutput::Scope t(timer, "rk_stage - integrals L_h");
 
@@ -124,8 +127,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
   {
     TimerOutput::Scope t(timer, "rk_stage - inv mass + vec upd");
     // This is the sixth version of data.cell_loop. I highlight that the first
-    // of the two functions (which  corresponds to "operation_before_loop" is a 
-    // void function
+    // of the two functions in the argument (which  corresponds to 
+    // "operation_before_loop" is a void function.
     // As a complete newbie I must note that [&] captures ALL the variables in
     // in the scope by reference, therefore I can use "solution" in the body
     // of the lamba function (look up on the slides)
@@ -163,27 +166,27 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
   }
 }
 
-// This function is entirely copied from tutorial 67. The only thing changed is
-// dim +2 which becomes dim+1 since here I don't have an energy equation
+// This function projects a function to the solution vector.
 template <int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::project(
-                                                const Function<dim> & function,
-                                                SolutionType &solution) const
+  const Function<dim> & function,
+  SolutionType &solution) const
 {
   FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
   MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
-      inverse(phi);
+    inverse(phi);
   solution.zero_out_ghost_values();
-  for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell){
-      phi.reinit(cell);
-      for (unsigned int q = 0; q < phi.n_q_points; ++q)
-          phi.submit_dof_value(evaluate_function(function,
-                                                  phi.quadrature_point(q)),
-                                q);
-      inverse.transform_from_q_points_to_basis(dim + 1,
-                                                phi.begin_dof_values(),
-                                                phi.begin_dof_values());
-      phi.set_dof_values(solution);
+  for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
+  {
+    phi.reinit(cell);
+    for (unsigned int q = 0; q < phi.n_q_points; ++q)
+      phi.submit_dof_value(evaluate_function(function,
+        phi.quadrature_point(q)),
+        q);
+    inverse.transform_from_q_points_to_basis(dim + 1,
+      phi.begin_dof_values(),
+      phi.begin_dof_values());
+    phi.set_dof_values(solution);
   }                                                
 }
 
@@ -242,19 +245,19 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
 }
 
 template<int dim, int degree, int n_points_1d>
-void
-EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix(
-  const MatrixFree<dim, Number> &                   data,
-            SolutionType &      dst,
-            const SolutionType &src,
-            const std::pair<unsigned int, unsigned int> &     cell_range) const{
-  // TODO: why 
-  FEEvaluation<dim, degree, /*degree + 1*/n_points_1d, dim + 1, Number>
+void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix(
+    const MatrixFree<dim, Number> & data,
+    SolutionType & dst,
+    const SolutionType & src,
+    const std::pair<unsigned int, unsigned int> & cell_range) const
+{
+  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number>
     phi(data, 0, 1);
   MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
     inverse(phi);
   
-  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell){
+  for( unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
+  {
     phi.reinit(cell);
     phi.read_dof_values(src);
 
@@ -356,7 +359,6 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
     for( unsigned int q = 0; q < phi.n_q_points; ++q){
       const auto w_m = phi.get_value(q);
       const auto normal = phi.normal_vector(q);
-
       // TODO: understand my boundary conditions
     }
   }

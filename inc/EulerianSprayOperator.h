@@ -42,7 +42,7 @@ class EulerianSprayOperator{
 
     // void set_body_force(std::unique_ptr<Function<dim>> body_force);
 
-    void apply(const double current_time,
+    void apply(const Number current_time,
       const SolutionType & src,
       SolutionType & dst) const;
 

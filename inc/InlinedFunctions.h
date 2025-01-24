@@ -79,9 +79,10 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
     case local_lax_friedrichs:
     {
       // TODO: implement lambda for our local Lax Friedrichs flux
-      const auto lambda = 1;// std::max();
+      const auto delta = std::max(std::abs(velocity_plus * normal),
+        std::abs(velocity_minus * normal));
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
-              0.5 * lambda * (w_minus - w_plus);
+              0.5 * delta * (w_minus - w_plus);
     }
     default:{
       Assert(false, ExcNotImplemented());
