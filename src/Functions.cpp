@@ -60,6 +60,7 @@ double FinalSolution<dim>::value(const Point<dim> & p,
   }
 }
 
- template class InitialSolution<1>;
- template class InitialSolution<2>;
- template class InitialSolution<3>;
+
+
+template class InitialSolution<2>;
+template class InitialSolution<3>;
