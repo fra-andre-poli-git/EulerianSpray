@@ -30,7 +30,7 @@ template <int dim, typename Number>
 // TODO: understand why I use DEAL_II_ALWAYS_INLINE
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Tensor<1, dim, Number>>
-eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables)
+  eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables)
 {
   const Tensor<1, dim, Number> velocity =
     eulerian_spray_velocity<dim>(conserved_variables);
@@ -79,8 +79,11 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
     case local_lax_friedrichs:
     {
       // TODO: implement lambda for our local Lax Friedrichs flux
-      const auto delta = std::max(std::abs(velocity_plus * normal),
-        std::abs(velocity_minus * normal));
+      auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
+      auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
+      const auto delta = std::max(std::abs(v_p_times_n ),
+        std::abs(v_m_times_n));
+      
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
               0.5 * delta * (w_minus - w_plus);
     }

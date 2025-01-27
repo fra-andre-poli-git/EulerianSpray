@@ -245,7 +245,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
 }
 
 template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_inverse_mass_matrix(
+void EulerianSprayOperator<dim, degree, n_points_1d>::
+  local_apply_inverse_mass_matrix(
     const MatrixFree<dim, Number> & data,
     SolutionType & dst,
     const SolutionType & src,
@@ -400,6 +401,6 @@ evaluate_function(const Function<dim> &                      function,
 
 
 //Instantiations of the template
-template class EulerianSprayOperator<1, 2, 4>;
+template class EulerianSprayOperator<2, 0, 2>;
+template class EulerianSprayOperator<2, 1, 3>;
 template class EulerianSprayOperator<2, 2, 4>;
-template class EulerianSprayOperator<3, 2, 4>;

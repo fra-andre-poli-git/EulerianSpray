@@ -109,7 +109,6 @@ class EulerianSprayOperator{
 // Here I declare the helper function that I use for evaluation in
 // EulerianSprayOperator methods. This is a template function that is used for
 // the evaluation.
-// Completely copied from tutorial 67
 template <int dim, typename Number>
 VectorizedArray<Number>
 evaluate_function(const Function<dim> &,

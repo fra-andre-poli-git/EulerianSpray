@@ -5,6 +5,7 @@
 #include"InlinedFunctions.h"
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/grid/tria_description.h>
+#include<deal.II/grid/grid_tools.h>
 #include<deal.II/fe/fe_dgq.h>
 #include<deal.II/base/utilities.h>
 #include<deal.II/numerics/vector_tools.h>
@@ -38,10 +39,24 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
   switch(testcase)
   {
     case 1:{
-        GridGenerator::hyper_cube(triangulation, -1., 1.);
+        // Note the fact that last argument is true, therefore we get different
+        // boundary_id for the four boundaries
+        GridGenerator::hyper_cube(triangulation, -1., 1., true);
         // I don't know why, but in step 67 it refines the mesh two times 
         // previously than n_global_refinement
         //triangulation.refine_global(2);
+
+        // TODO: put an if if I am using parallel::distributed::triangulation
+        // These three lines make a periodicity constraint on left and right 
+        // boundaries 
+        std::vector<GridTools::PeriodicFacePair<
+          typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+        GridTools::collect_periodic_faces(triangulation,
+          0,
+          1,
+          0,
+          periodicity_vector);
+        triangulation.add_periodicity(periodicity_vector);
         final_time = parameter_final_time;
         break;
     }
@@ -254,6 +269,4 @@ EulerianSprayProblem<dim>::Postprocessor::get_needed_update_flags() const
 }
 
 // Instantiations of the template
-//template class EulerianSprayProblem<1>;
 template class EulerianSprayProblem<2>;
-template class EulerianSprayProblem<3>;

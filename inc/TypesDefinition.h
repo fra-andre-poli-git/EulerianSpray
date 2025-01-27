@@ -15,9 +15,9 @@ using SolutionType = LinearAlgebra::distributed::Vector<Number>;
 // instance in line 121 of EulerianSprayOperator.cpp
 // TODO: make the code work for both Vector and distributed::Vector
 
-constexpr unsigned int testcase = 3;
-constexpr int fe_degree = 2;
-constexpr int n_global_refinements = 3;
+constexpr unsigned int testcase = 1;
+constexpr int fe_degree = 0;
+constexpr int n_global_refinements = 8;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
 constexpr double parameter_final_time = 0.5;
 constexpr double snapshot = 0.05;

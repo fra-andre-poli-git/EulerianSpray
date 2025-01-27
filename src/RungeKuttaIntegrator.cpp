@@ -85,23 +85,24 @@ void RungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
 
 //Instantiations of the template function
 template void RungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<1,2,4>>(const EulerianSprayOperator<1,2,4> &,
+  EulerianSprayOperator<2,0,2>>(const EulerianSprayOperator<2,0,2> &,
     const double,
     const double,
     SolutionType &,
     SolutionType &,
     SolutionType &) const;
+
+template void RungeKuttaIntegrator::perform_time_step<SolutionType,
+  EulerianSprayOperator<2,1,3>>(const EulerianSprayOperator<2,1,3> &,
+    const double,
+    const double,
+    SolutionType &,
+    SolutionType &,
+    SolutionType &) const;
+
 
 template void RungeKuttaIntegrator::perform_time_step<SolutionType,
   EulerianSprayOperator<2,2,4>>(const EulerianSprayOperator<2,2,4> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
-
-template void RungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<3,2,4>>(const EulerianSprayOperator<3,2,4> &,
     const double,
     const double,
     SolutionType &,

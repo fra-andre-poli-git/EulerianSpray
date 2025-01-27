@@ -32,7 +32,7 @@ template<int dim> class EulerianSprayProblem{
     SolutionType solution;
 
     ConditionalOStream pcout;
-
+    // TODO: put an if to get distributed triangulation
     Triangulation<dim> triangulation;
     const FESystem<dim> fe;
     MappingQ<dim> mapping;

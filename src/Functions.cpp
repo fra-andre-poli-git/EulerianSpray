@@ -27,10 +27,10 @@ double InitialSolution<dim>::value(const Point<dim> & p,
     case 3:
     {
       if(component==0)
-        return 0.9*(((-0.3<p[0] && p[0] <0.2) && (-0.15<p[1] && p[1] <0.05)) ||
+        return 0.9*(((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) ||
           ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15))) + 0.1;
       if(component==1)
-        return 0.5 * ((-0.3<p[0] && p[0] <0.2) && (-0.15<p[1] && p[1] <0.05)) +
+        return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) +
           -0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
       return 0.;
     }
@@ -53,10 +53,10 @@ double FinalSolution<dim>::value(const Point<dim> & p,
       return 0.;
     }
     default:
-  {
+    {
     Assert(false, ExcNotImplemented());
     return 0.;
-  }
+    }
   }
 }
 
