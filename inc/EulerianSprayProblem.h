@@ -38,15 +38,16 @@ template<int dim> class EulerianSprayProblem{
     MappingQ<dim> mapping;
     DoFHandler<dim> dof_handler;
 
+    double time;
+
+    double time_step;
+
+    TimerOutput timer;
+
+    double final_time;
 
     EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerian_spray_operator;
-
-
-    double time;
-    double time_step;
-    TimerOutput timer;
-    double final_time;
- 
+    
     class Postprocessor : public DataPostprocessor<dim>{
       public:
         Postprocessor();
