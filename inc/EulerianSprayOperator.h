@@ -27,20 +27,10 @@ class EulerianSprayOperator{
     void reinit(const Mapping<dim> & mapping,
       const DoFHandler<dim> & dof_handler);
 
-    // Now I put some methods relating boundary conditions and body force
-    // for which I have to understand better what I need. For the moment
-    // they will be commented.
+    void set_neumann_boundary(const types::boundary_id boundary_id);
 
-    // void set_inflow_boundary(const types::boundary_id       boundary_id,
-    //                      std::unique_ptr<Function<dim>> inflow_function);
-
-    // void set_subsonic_outflow_boundary(
-    //             const types::boundary_id       boundary_id,
-    //             std::unique_ptr<Function<dim>> outflow_energy);
-
-    // void set_wall_boundary(const types::boundary_id boundary_id);
-
-    // void set_body_force(std::unique_ptr<Function<dim>> body_force);
+    void set_dirichlet_boundary(const types::boundary_id boundary_id,
+      std::unique_ptr<Function<dim>> dirichlet_function);
 
     void apply(const Number current_time,
       const SolutionType & src,
@@ -72,13 +62,9 @@ class EulerianSprayOperator{
 
     TimerOutput & timer;
 
-    // TODO: understand this chunk
-    // std::map<types::boundary_id, std::unique_ptr<Function<dim>>>
-    //     inflow_boundaries;
-    // std::map<types::boundary_id, std::unique_ptr<Function<dim>>>
-    //     subsonic_outflow_boundaries;
-    // std::set<types::boundary_id>   wall_boundaries;
-    // std::unique_ptr<Function<dim>> body_force;
+    std::map<types::boundary_id, std::unique_ptr<Function<dim>>>
+      dirichlet_boundaries;
+    std::set<types::boundary_id> neumann_boundaries;
 
     void local_apply_inverse_mass_matrix(
       const MatrixFree<dim, Number> & data,

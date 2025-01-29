@@ -17,9 +17,7 @@
 
 template <int dim>
 EulerianSprayProblem<dim>::EulerianSprayProblem():
-    pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
-    // Il +1 è perché ho momento nelle direzioni delle dimensioni + massa
-    // (a differenza di Eulero non ho energia)    
+    pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),    
     fe(FE_DGQ<dim>(fe_degree),dim+1),
     // mapping only works with a degree>=2
     mapping(fe_degree >= 2 ? fe_degree : 2),
@@ -27,7 +25,7 @@ EulerianSprayProblem<dim>::EulerianSprayProblem():
     time(0),
     time_step(0),
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
-    eulerianspray_operator(timer)
+    eulerian_spray_operator(timer)
     {}
 
 template <int dim>
@@ -39,31 +37,40 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
   switch(testcase)
   {
     case 1:{
-        // Note the fact that last argument is true, therefore we get different
-        // boundary_id for the four boundaries
-        GridGenerator::hyper_cube(triangulation, -1., 1., true);
-        // I don't know why, but in step 67 it refines the mesh two times 
-        // previously than n_global_refinement
-        //triangulation.refine_global(2);
+      // Note the fact that last argument is true, therefore we get different
+      // boundary_id for the four boundaries
+      GridGenerator::hyper_cube(triangulation, -1., 1., true);
 
-        // TODO: put an if if I am using parallel::distributed::triangulation
-        // These three lines make a periodicity constraint on left and right 
-        // boundaries 
-        std::vector<GridTools::PeriodicFacePair<
-          typename Triangulation<dim>::cell_iterator>> periodicity_vector;
-        GridTools::collect_periodic_faces(triangulation,
-          0,
-          1,
-          0,
-          periodicity_vector);
-        triangulation.add_periodicity(periodicity_vector);
-        final_time = parameter_final_time;
-        break;
+      // TODO: put an if if I am using parallel::distributed::triangulation
+      // These three lines make a periodicity constraint on top and bottom
+      // boundaries
+      std::vector<GridTools::PeriodicFacePair<
+        typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+      GridTools::collect_periodic_faces(triangulation,
+        2,
+        3,
+        1,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+      
+      eulerian_spray_operator.set_neumann_boundary(0);
+      // eulerian_spray_operator.set_dirichlet_boundary(0,
+      //   std::make_unique<DirichletFunction<dim>>());
+      eulerian_spray_operator.set_dirichlet_boundary(1,
+        std::make_unique<DirichletFunction<dim>>());
+
+      final_time = parameter_final_time;
+      break;
     }
     case 2:{}
     case 3:
     {
       GridGenerator::hyper_cube(triangulation, -0.5,0.5);
+      final_time = parameter_final_time;
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
       final_time = parameter_final_time;
       break;
     }
@@ -73,8 +80,8 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
 
   dof_handler.distribute_dofs(fe);
 
-  eulerianspray_operator.reinit(mapping, dof_handler);
-  eulerianspray_operator.initialize_vector(solution);
+  eulerian_spray_operator.reinit(mapping, dof_handler);
+  eulerian_spray_operator.initialize_vector(solution);
 
   std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
             << " ( = " << (dim + 1) << " [vars] x "
@@ -161,8 +168,9 @@ void EulerianSprayProblem<dim>::run()
 
   // Here I should initialize the solution
   // Step 67 does this projecting the exact solution onto the solution vector
-  // but I don't have an exact solution for every time step, therefore I use the initial solution
-  eulerianspray_operator.project(InitialSolution<dim>(), solution);
+  // but I don't have an exact solution for every time step, therefore I use the
+  // initial solution
+  eulerian_spray_operator.project(InitialSolution<dim>(), solution);
 
   //This small chunk aims at finding h, the smallest distance between two nodes
   double min_vertex_distance = std::numeric_limits<double>::max();
@@ -190,7 +198,7 @@ void EulerianSprayProblem<dim>::run()
     ++timestep_number;
     // Here the integration in time is performed by the integrator
     {
-      integrator.perform_time_step(eulerianspray_operator,
+      integrator.perform_time_step(eulerian_spray_operator,
         time,
         time_step,
         solution,
@@ -227,7 +235,6 @@ void EulerianSprayProblem<dim>::Postprocessor::evaluate_vector_field(
     Tensor<1, dim + 1> solution;
     for(unsigned int d = 0; d < dim +1; ++d)
       solution[d] = inputs.solution_values[p](d);
-    const double density = solution[0];
     const Tensor<1, dim> velocity = eulerian_spray_velocity<dim>(solution);
     
     for(unsigned int d = 0; d<dim; ++d)

@@ -42,25 +42,45 @@ double InitialSolution<dim>::value(const Point<dim> & p,
   }
 }
 
+// template<int dim>
+// double FinalSolution<dim>::value(const Point<dim> & p,
+//   const unsigned int component) const
+// {
+//   switch(testcase)
+//   {
+//     case 1:
+//     {
+//       return 0.;
+//     }
+//     default:
+//       Assert(false, ExcNotImplemented());
+//     return 0.;
+//   }
+// }
+
 template<int dim>
-double FinalSolution<dim>::value(const Point<dim> & p,
+double DirichletFunction<dim>::value(const Point<dim> & p,
   const unsigned int component) const
 {
   switch(testcase)
   {
     case 1:
     {
-      return 0.;
+      if(component == 0)
+        return 0.5;
+      else if(component == 1)
+        return (0.5*(-0.4)*(p[0]>0) + 0.5*(-0.5)*(p[0]<0));
+      else
+        return 0.;
     }
     default:
-    {
-    Assert(false, ExcNotImplemented());
+      Assert(false, ExcNotImplemented());
     return 0.;
-    }
   }
 }
 
-
-
 template class InitialSolution<2>;
 template class InitialSolution<3>;
+
+template class DirichletFunction<2>;
+template class DirichletFunction<3>;

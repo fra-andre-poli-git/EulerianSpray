@@ -15,9 +15,9 @@ using SolutionType = LinearAlgebra::distributed::Vector<Number>;
 // instance in line 121 of EulerianSprayOperator.cpp
 // TODO: make the code work for both Vector and distributed::Vector
 
-constexpr unsigned int testcase = 1;
+constexpr unsigned int testcase = 3;
 constexpr int fe_degree = 0;
-constexpr int n_global_refinements = 8;
+constexpr int n_global_refinements = 7;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
 constexpr double parameter_final_time = 0.5;
 constexpr double snapshot = 0.05;
@@ -28,7 +28,7 @@ enum RungeKuttaScheme
     stage_7_order_4, /* Tselios, Simos, 2007 */
     stage_9_order_5, /* Kennedy, Carpenter, Lewis, 2000 */
   };
-constexpr RungeKuttaScheme scheme = stage_3_order_3;
+constexpr RungeKuttaScheme scheme = stage_5_order_4;
 
 // I define this enumerator even thoug it has only one element since I may
 // decide to implement other types of numerical flux

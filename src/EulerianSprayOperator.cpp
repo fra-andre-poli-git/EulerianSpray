@@ -55,6 +55,26 @@ template <int dim, int degree, int n_points_1d>
 }
 
 template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::set_neumann_boundary(
+  const types::boundary_id boundary_id)
+{
+  // TODO: it would be nice to set an assert to ensure I didn't set other
+  // boundary condition, like the one in step 67
+  neumann_boundaries.insert(boundary_id);
+}
+
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::set_dirichlet_boundary(
+  const types::boundary_id boundary_id,
+  std::unique_ptr<Function<dim>> dirichlet_function)
+{
+  // TODO: it would be nice to set an assert to ensure I didn't set other
+  // boundary condition, like the one in step 67
+  dirichlet_boundaries[boundary_id] = std::move(dirichlet_function);
+}
+
+
+template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
   const Number current_time,
   const SolutionType & src,
@@ -66,11 +86,6 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
       // This is for the output, I may use it later
       // TimerOutput::Scope t(timer, "apply - integrals");
 
-      // This is for the boundary values, I will have to change it (TODO)
-      // for (auto &i : inflow_boundaries)
-      //   i.second->set_time(current_time);
-      // for (auto &i : subsonic_outflow_boundaries)
-      //   i.second->set_time(current_time);
       data.loop(& EulerianSprayOperator::local_apply_cell,
         & EulerianSprayOperator::local_apply_face,
         & EulerianSprayOperator::local_apply_boundary_face,
@@ -349,22 +364,47 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
   const MatrixFree<dim, Number> &                   data,
   SolutionType &      dst,
   const SolutionType & src,
-  const std::pair<unsigned int, unsigned int> &     face_range) const{
-  
+  const std::pair<unsigned int, unsigned int> &     face_range) const
+{
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, true);
 
-  for( unsigned int face = face_range.first; face < face_range.second; ++face){
+  for( unsigned int face = face_range.first; face < face_range.second; ++face)
+  {
     phi.reinit(face);
     phi.gather_evaluate(src, EvaluationFlags::values);
     
-    for( unsigned int q = 0; q < phi.n_q_points; ++q){
+    for( unsigned int q = 0; q < phi.n_q_points; ++q)
+    {
       const auto w_m = phi.get_value(q);
-      const auto normal = phi.normal_vector(q);
-      // TODO: understand my boundary conditions
+      const auto normal = phi.normal_vector(q); 
+
+      Tensor<1, dim + 1, VectorizedArray<Number>> w_p;
+      const auto boundary_id = data.get_boundary_id(face);
+      if(neumann_boundaries.find(boundary_id) != neumann_boundaries.end())
+      {
+        for(unsigned int d = 0; d < dim+1; ++d)
+          w_p[d] = w_m[d];
+      }
+      else if(dirichlet_boundaries.find(boundary_id) != 
+        dirichlet_boundaries.end())
+      {
+        w_p = evaluate_function(*dirichlet_boundaries.find(boundary_id)->second,
+          phi.quadrature_point(q));
+      }
+      else
+        AssertThrow(false,
+          ExcMessage("Unknown boundary id, did you set a boundary condition"
+            " for this part of the domain boundary?"));
+
+      auto flux = eulerian_spray_numerical_flux<dim>(w_m, w_p, normal);
+
+      phi.submit_value(-flux, q);
     }
+
   }
-  
+  phi.integrate_scatter(EvaluationFlags::values, dst);
 }
+
 
 // This is the implementation of the two helper function (defined here since
 // they are only used by EulerianSprayOperator methods)

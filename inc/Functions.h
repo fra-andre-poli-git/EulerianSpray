@@ -6,7 +6,8 @@
 using namespace dealii;
 
 template<int dim>
-class InitialSolution : public Function<dim>{
+class InitialSolution : public Function<dim>
+{
   public:
     InitialSolution(): Function<dim>(dim + 1){};
     virtual double value(const Point<dim> & p, const unsigned int component) 
@@ -22,7 +23,13 @@ class FinalSolution : public Function<dim>
       const override;
 };
 
-// template<int dim>
-// class ExternalFlow : public Function<dim>
+template<int dim>
+class DirichletFunction : public Function<dim>
+{
+  public:
+    DirichletFunction():Function<dim>(dim + 1){};
+    virtual double value(const Point<dim> & p, const unsigned int component)
+      const override;
+};
 
 #endif
