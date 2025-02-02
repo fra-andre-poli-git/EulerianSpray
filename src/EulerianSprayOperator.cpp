@@ -107,10 +107,11 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
   }
 }
 
-// This function performs one stage of Runge-Kutta integration. It is very
-// similar EulerianSprayOperator::apply() with an update of 
+// This function performs one stage of low storage Runge-Kutta integration. It 
+// is very similar EulerianSprayOperator::apply() with an update of the vectors
+// ki and ri used in RK
 template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::perform_stage(
+void EulerianSprayOperator<dim, degree, n_points_1d>::perform_lsrk_stage(
   const Number current_time,
   const Number factor_solution,
   const Number factor_ai,
@@ -339,7 +340,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_p(data,
     false);
   
-  for(unsigned int face = face_range.first; face < face_range.second; ++face){
+  for(unsigned int face = face_range.first; face < face_range.second; ++face)
+  {
     phi_p.reinit(face);
     phi_p.gather_evaluate(src, EvaluationFlags::values);
 
@@ -361,10 +363,10 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
 
 template<int dim, int degree, int n_points_1d>
 void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
-  const MatrixFree<dim, Number> &                   data,
-  SolutionType &      dst,
+  const MatrixFree<dim, Number> &,
+  SolutionType & dst,
   const SolutionType & src,
-  const std::pair<unsigned int, unsigned int> &     face_range) const
+  const std::pair<unsigned int, unsigned int> & face_range) const
 {
   FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, true);
 
@@ -400,9 +402,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
 
       phi.submit_value(-flux, q);
     }
-
+     phi.integrate_scatter(EvaluationFlags::values, dst);
   }
-  phi.integrate_scatter(EvaluationFlags::values, dst);
 }
 
 

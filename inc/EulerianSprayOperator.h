@@ -36,7 +36,7 @@ class EulerianSprayOperator{
       const SolutionType & src,
       SolutionType & dst) const;
 
-    void perform_stage(const Number current_time,
+    void perform_lsrk_stage(const Number current_time,
       const Number factor_solution,
       const Number factor_ai,
       const SolutionType & current_ri,

@@ -35,7 +35,7 @@ template<int dim> class EulerianSprayProblem{
     // TODO: put an if to get distributed triangulation
     Triangulation<dim> triangulation;
     const FESystem<dim> fe;
-    MappingQ<dim> mapping;
+    MappingQ1<dim> mapping;
     DoFHandler<dim> dof_handler;
 
     double time;

@@ -20,7 +20,8 @@ EulerianSprayProblem<dim>::EulerianSprayProblem():
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),    
     fe(FE_DGQ<dim>(fe_degree),dim+1),
     // mapping only works with a degree>=2
-    mapping(fe_degree >= 2 ? fe_degree : 2),
+    // mapping(fe_degree >= 2 ? fe_degree : 2),
+    mapping(),
     dof_handler(triangulation),
     time(0),
     time_step(0),
@@ -52,12 +53,22 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
         1,
         periodicity_vector);
       triangulation.add_periodicity(periodicity_vector);
+
+      // std::vector<GridTools::PeriodicFacePair<
+      //   typename Triangulation<dim>::cell_iterator>> periodicity_vector2;
+      // GridTools::collect_periodic_faces(triangulation,
+      //   0,
+      //   1,
+      //   0,
+      //   periodicity_vector2);
+      // triangulation.add_periodicity(periodicity_vector2);
       
       eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
       // eulerian_spray_operator.set_dirichlet_boundary(0,
       //   std::make_unique<DirichletFunction<dim>>());
-      eulerian_spray_operator.set_dirichlet_boundary(1,
-        std::make_unique<DirichletFunction<dim>>());
+      // eulerian_spray_operator.set_dirichlet_boundary(1,
+      //   std::make_unique<DirichletFunction<dim>>());
 
       final_time = parameter_final_time;
       break;
@@ -159,7 +170,8 @@ void EulerianSprayProblem<dim>::run()
 
   make_grid_and_dofs();
 
-  const RungeKuttaIntegrator integrator(scheme);
+  const SSPRungeKuttaIntegrator integrator(scheme);
+  
 
   SolutionType rk_register1;
   SolutionType rk_register2;
