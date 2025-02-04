@@ -50,10 +50,9 @@ class EulerianSprayOperator{
     std::array<double, 3> compute_errors(const Function<dim> & function,
       const SolutionType & solution) const;
 
-    // I comment the following function because for the moment I am using a
-    // fixed time step, I don't compute it
-    // double compute_cell_transport_speed(const SolutionType & solution)
-    //     const;   
+
+    double compute_cell_transport_speed(const SolutionType & solution)
+      const;   
 
     void initialize_vector(SolutionType &vector) const;
 

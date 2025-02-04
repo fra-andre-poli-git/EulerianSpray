@@ -40,7 +40,11 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
     case 1:{
       // Note the fact that last argument is true, therefore we get different
       // boundary_id for the four boundaries
-      GridGenerator::hyper_cube(triangulation, -1., 1., true);
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+        {n_el_x_direction,5},
+        Point<dim>(-1,0),
+        Point<dim>(1,0.1),
+        true);
 
       // TODO: put an if if I am using parallel::distributed::triangulation
       // These three lines make a periodicity constraint on top and bottom
@@ -54,40 +58,49 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
         periodicity_vector);
       triangulation.add_periodicity(periodicity_vector);
 
-      // std::vector<GridTools::PeriodicFacePair<
-      //   typename Triangulation<dim>::cell_iterator>> periodicity_vector2;
-      // GridTools::collect_periodic_faces(triangulation,
-      //   0,
-      //   1,
-      //   0,
-      //   periodicity_vector2);
-      // triangulation.add_periodicity(periodicity_vector2);
-      
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-      // eulerian_spray_operator.set_dirichlet_boundary(0,
-      //   std::make_unique<DirichletFunction<dim>>());
-      // eulerian_spray_operator.set_dirichlet_boundary(1,
-      //   std::make_unique<DirichletFunction<dim>>());
 
-      final_time = parameter_final_time;
+      final_time = 0.5;
       break;
     }
-    case 2:{}
+    case 2:
+    {
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+        {n_el_x_direction,5},
+        Point<dim>(-1,0),
+        Point<dim>(1,0.1),
+        true);
+      std::vector<GridTools::PeriodicFacePair<
+        typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+      GridTools::collect_periodic_faces(triangulation,
+        2,
+        3,
+        1,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      final_time = 0.5;
+      break;
+    }
     case 3:
     {
-      GridGenerator::hyper_cube(triangulation, -0.5,0.5);
-      final_time = parameter_final_time;
+      GridGenerator::hyper_cube(triangulation, -0.5,0.5, true);
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
       eulerian_spray_operator.set_neumann_boundary(3);
-      final_time = parameter_final_time;
+      final_time = 1;
+      triangulation.refine_global(n_global_refinements);
       break;
     }
+    case 4:
+    {
+      GridGenerator::hyper_cube(triangulation, 0, 1, true);
+    }
   }
-
-  triangulation.refine_global(n_global_refinements);
 
   dof_handler.distribute_dofs(fe);
 
@@ -186,16 +199,29 @@ void EulerianSprayProblem<dim>::run()
 
   //This small chunk aims at finding h, the smallest distance between two nodes
   double min_vertex_distance = std::numeric_limits<double>::max();
-  for(const auto & cell : triangulation.active_cell_iterators()){
-      min_vertex_distance =
-          std::min(min_vertex_distance, cell->minimum_vertex_distance());
+  // If the test is a 1d test in disguise, I will take as h the size of the cell
+  // in x direction
+  if(testcase==1 || testcase==2)
+  {
+    for(const auto & cell : triangulation.active_cell_iterators())
+      min_vertex_distance = 
+        std::min(min_vertex_distance, cell->extent_in_direction(0));
   }
+  // Otherwise I will use the minimum distance between vertices
+  else
+  {
+    for(const auto & cell : triangulation.active_cell_iterators())
+      min_vertex_distance =
+        std::min(min_vertex_distance, cell->minimum_vertex_distance());
+  }
+  
+  
   // with MPI here I have to make the minimum over all processors
   min_vertex_distance =
     Utilities::MPI::min(min_vertex_distance, MPI_COMM_WORLD);
-
+  double CFL = 1;
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
-  time_step = 1./std::pow((fe_degree+1),2) * min_vertex_distance;
+  time_step = CFL/std::pow((fe_degree+1),2) * min_vertex_distance;
   pcout << "Time step size: " << time_step
     << ", minimal h: " << min_vertex_distance
     << std::endl
@@ -210,6 +236,11 @@ void EulerianSprayProblem<dim>::run()
     ++timestep_number;
     // Here the integration in time is performed by the integrator
     {
+      // TODO: uncomment this for varying time step
+      // if(timestep_number % 5 == 0)
+      //   time_step = CFL /std::pow((2*fe_degree+1),2) * min_vertex_distance *
+      //     integrator.n_stages() / Utilities::truncate_to_n_digits(
+      //       eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
       integrator.perform_time_step(eulerian_spray_operator,
         time,
         time_step,

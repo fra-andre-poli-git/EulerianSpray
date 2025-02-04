@@ -27,7 +27,16 @@ template<int dim>
 class DirichletFunction : public Function<dim>
 {
   public:
-    DirichletFunction():Function<dim>(dim + 1){};
+    DirichletFunction(const double time):Function<dim>(dim + 1, time){};
+    virtual double value(const Point<dim> & p, const unsigned int component)
+      const override;
+};
+
+template<int dim>
+class ExternalFlux : public Function<dim>
+{
+  public:
+    ExternalFlux(const double time):Function<dim>(dim, time){};
     virtual double value(const Point<dim> & p, const unsigned int component)
       const override;
 };

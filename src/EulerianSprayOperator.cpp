@@ -244,13 +244,67 @@ EulerianSprayOperator<dim, degree, n_points_1d>::compute_errors(
 }
 
 
-// I will implement the following function, otherwise TODO erase it
 
-// template<int dim, int degree, int n_points_1d>
-// double
-// EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
-//   const SolutionType & solution) const;{
-// }
+template<int dim, int degree, int n_points_1d>
+double
+EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
+  const SolutionType & solution) const
+{
+  TimerOutput::Scope t(timer, "compute transport speed");
+    Number             max_transport = 0;
+    FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
+
+    for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
+      {
+        phi.reinit(cell);
+        phi.gather_evaluate(solution, EvaluationFlags::values);
+        VectorizedArray<Number> local_max = 0.;
+        for (unsigned int q = 0; q < phi.n_q_points; ++q)
+          {
+            const auto solution = phi.get_value(q);
+            const auto velocity = eulerian_spray_velocity<dim>(solution);
+//            const auto pressure = euler_pressure<dim>(solution);
+
+            const auto inverse_jacobian = phi.inverse_jacobian(q);
+            const auto convective_speed = inverse_jacobian * velocity;
+            VectorizedArray<Number> convective_limit = 0.;
+            for (unsigned int d = 0; d < dim; ++d)
+              convective_limit =
+                std::max(convective_limit, std::abs(convective_speed[d]));
+
+            // const auto speed_of_sound =
+            //   std::sqrt(gamma * pressure * (1. / solution[0]));
+
+            Tensor<1, dim, VectorizedArray<Number>> eigenvector;
+            for (unsigned int d = 0; d < dim; ++d)
+              eigenvector[d] = 1.;
+            for (unsigned int i = 0; i < 5; ++i)
+              {
+                eigenvector = transpose(inverse_jacobian) *
+                              (inverse_jacobian * eigenvector);
+                VectorizedArray<Number> eigenvector_norm = 0.;
+                for (unsigned int d = 0; d < dim; ++d)
+                  eigenvector_norm =
+                    std::max(eigenvector_norm, std::abs(eigenvector[d]));
+                eigenvector /= eigenvector_norm;
+              }
+            const auto jac_times_ev   = inverse_jacobian * eigenvector;
+            const auto max_eigenvalue = std::sqrt(
+              (jac_times_ev * jac_times_ev) / (eigenvector * eigenvector));
+            local_max =
+              std::max(local_max,
+                       /*max_eigenvalue * speed_of_sound +*/ convective_limit);
+          }
+
+        for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell);
+             ++v)
+          for (unsigned int d = 0; d < 3; ++d)
+            max_transport = std::max(max_transport, local_max[v]);
+      }
+
+    max_transport = Utilities::MPI::max(max_transport, MPI_COMM_WORLD);
+    return max_transport;
+}
 
 
 template <int dim, int degree, int n_points_1d>
@@ -428,16 +482,16 @@ template <int dim, typename Number, int n_components = dim + 1>
 Tensor<1, n_components, VectorizedArray<Number>>
 evaluate_function(const Function<dim> &                      function,
                 const Point<dim, VectorizedArray<Number>> &p_vectorized){
-    AssertDimension(function.n_components, n_components);
-    Tensor<1, n_components, VectorizedArray<Number>> result;
-    for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
-        Point<dim> p;
-        for (unsigned int d = 0; d < dim; ++d)
-            p[d] = p_vectorized[d][v];
-        for (unsigned int d = 0; d < n_components; ++d)
-            result[d][v] = function.value(p, d);
-    }
-    return result;
+  AssertDimension(function.n_components, n_components);
+  Tensor<1, n_components, VectorizedArray<Number>> result;
+  for (unsigned int v = 0; v < VectorizedArray<Number>::size(); ++v){
+      Point<dim> p;
+      for (unsigned int d = 0; d < dim; ++d)
+          p[d] = p_vectorized[d][v];
+      for (unsigned int d = 0; d < n_components; ++d)
+          result[d][v] = function.value(p, d);
+  }
+  return result;
 }
 
 
