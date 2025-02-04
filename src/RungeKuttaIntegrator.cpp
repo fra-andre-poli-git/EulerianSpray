@@ -97,22 +97,19 @@ SSPRungeKuttaIntegrator::SSPRungeKuttaIntegrator(const RungeKuttaScheme scheme)
   {
     case forward_euler:
     {
-      bi={1};
-      aij={};
+      factor={1};
       ci={0};
       break;
     }
     case ssp_stage_2_order_2:
     {
-      bi={1./2,1./2};
-      aij={1};
+      factor={1,1./2};
       ci={0,1};
       break;
     }
     case ssp_stage_3_order_3:
     {
-      bi={1./6,1./6,2./3};
-      aij={1,1./4,1./4};
+      factor={1,1./4,2./3};
       ci={0,1,1./2};
       break;
     }
@@ -141,7 +138,7 @@ void SSPRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
   const double    current_time,
   const double    time_step,
   VectorType &    solution,
-  VectorType &    vec_ri,
+  VectorType &    copy_solution,
   VectorType &    vec_ki) const
 {
   // This is the classical implementation
@@ -194,58 +191,74 @@ void SSPRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
 
   // This is the implementation to comply with filtering technique
 
-  (void) vec_ri;
-  (void) vec_ki;
-  unsigned int n_stages = bi.size();
+  // (void) vec_ri;
+  // (void) vec_ki;
+  // unsigned int n_stages = bi.size();
 
-  VectorType copy_solution;
+  // VectorType copy_solution;
+  // copy_solution.reinit(solution);
+  // copy_solution = solution;
+  // VectorType k;
+  // k.reinit(solution);
+
+  // // stage 1
+  // pde_operator.apply(current_time + ci[0] * time_step, solution, k);
+  // if(n_stages == 1)
+  // {
+  //   solution.add(bi[0]*time_step, k);
+  //   // filter solution
+  // }
+  // else
+  // {
+  //   solution.add(aij[0]*time_step, k);
+  //   // filter solution
+  //   //stage 2
+  //   pde_operator.apply(current_time + ci[1] * time_step, solution, k);
+  //   if(n_stages == 2)
+  //   {
+  //     double factor = bi[0]/aij[0];
+  //     solution*=factor;
+  //     solution.add(1-factor, copy_solution);
+  //     solution.add(bi[1]*time_step, k);
+  //     // filter solution
+  //   }
+  //   else
+  //   {
+  //     double factor = aij[1]*aij[0];
+  //     solution *=factor;
+  //     solution.add(1-factor, copy_solution);
+  //     solution.add(aij[2]*time_step, k);
+  //     // filter solution
+  //     pde_operator.apply(current_time + ci[2]*time_step, solution, k);
+  //     factor = bi[1]/aij[2]; // =bi[0]/(aij[0]*aij[1])
+  //     solution *= factor;
+  //     solution.add(1-factor, copy_solution);
+  //     solution.add(bi[2]*time_step,k);
+  //     // filter solution
+  //   }
+  // }
+
+  // This is a loop implementation of the former
   copy_solution.reinit(solution);
-  copy_solution = solution;
-  VectorType k;
-  k.reinit(solution);
+  copy_solution=solution;
+  vec_ki.reinit(solution);
 
-  // stage 1
-  pde_operator.apply(current_time + ci[0] * time_step, solution, k);
-  if(n_stages == 1)
+  unsigned int n_stages = factor.size();
+  for(unsigned int stage = 0; stage<n_stages; ++stage)
   {
-    solution.add(bi[0]*time_step, k);
-    // filter solution
+    pde_operator.apply(current_time + ci[stage]*time_step, solution, vec_ki);
+    solution *= factor[stage];
+    solution.add(factor[stage]*time_step, vec_ki);
+    solution.add(1-factor[stage], copy_solution);
+    //filter solution
   }
-  else
-  {
-    solution.add(aij[0]*time_step, k);
-    // filter solution
-    //stage 2
-    pde_operator.apply(current_time + ci[1] * time_step, solution, k);
-    if(n_stages == 2)
-    {
-      double factor = bi[0]/aij[0];
-      solution*=factor;
-      solution.add(1-factor, copy_solution);
-      solution.add(bi[1]*time_step, k);
-      // filter solution
-    }
-    else
-    {
-      double factor = aij[1]*aij[0];
-      solution *=factor;
-      solution.add(1-factor, copy_solution);
-      solution.add(aij[2]*time_step, k);
-      // filter solution
-      pde_operator.apply(current_time + ci[2]*time_step, solution, k);
-      factor = bi[1]/aij[2]; // =bi[0]/(aij[0]*aij[1])
-      solution *= factor;
-      solution.add(1-factor, copy_solution);
-      solution.add(bi[2]*time_step,k);
-      // filter solution
-    }
-  }
+  
 }
 
 unsigned int
 SSPRungeKuttaIntegrator::n_stages() const
 {
-  return bi.size();
+  return factor.size();
 }
 
 

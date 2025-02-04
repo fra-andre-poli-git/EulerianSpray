@@ -39,12 +39,10 @@ class SSPRungeKuttaIntegrator
   unsigned int n_stages() const;
   
   private:
-    std::vector<double> bi;
-    // aij will be assumed as the concatenation of the rows of the lower
-    // triangular part of the full matrix (diagonal excluded). Therefore
-    // a[i][j] = aij[i*(i-1)/2 + j]
-    // MATRIX INDICES START FROM 0
-    std::vector<double> aij;
+    // Instead of storing the whole matrix we store directly the vector of
+    // factors, which are multiplication/division of original Butcher tableau
+    // aijs and bis
+    std::vector<double> factor;
     std::vector<double> ci;
 };
 #endif
