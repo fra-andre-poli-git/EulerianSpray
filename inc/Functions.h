@@ -33,6 +33,15 @@ class DirichletFunction : public Function<dim>
 };
 
 template<int dim>
+class ExactSolution : public Function<dim>
+{
+  public:
+    ExactSolution(const double time):Function<dim>(dim, time){};
+    virtual double value(const Point<dim> & p, const unsigned int component)
+      const override;
+};
+
+template<int dim>
 class ExternalFlux : public Function<dim>
 {
   public:
@@ -40,5 +49,4 @@ class ExternalFlux : public Function<dim>
     virtual double value(const Point<dim> & p, const unsigned int component)
       const override;
 };
-
 #endif

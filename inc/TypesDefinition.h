@@ -18,7 +18,7 @@ using SolutionType = LinearAlgebra::distributed::Vector<Number>;
 constexpr unsigned int testcase = 2;
 constexpr int fe_degree = 0;
 constexpr int n_global_refinements = 7;
-constexpr int n_el_x_direction = 200;
+constexpr int n_el_x_direction = 400;
 constexpr unsigned int n_q_points_1d = fe_degree + 2;
 constexpr double snapshot = 0.05;
 enum RungeKuttaScheme

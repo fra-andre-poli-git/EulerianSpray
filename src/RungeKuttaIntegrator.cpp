@@ -3,7 +3,9 @@
 #include"TypesDefinition.h"
 #include"EulerianSprayOperator.h"
 #include<deal.II/base/time_stepping.h>
-LSRungeKuttaIntegrator::LSRungeKuttaIntegrator(
+
+template <typename VectorType, typename Operator>
+LSRungeKuttaIntegrator<VectorType,Operator>::LSRungeKuttaIntegrator(
   const RungeKuttaScheme scheme)
 {
   TimeStepping::runge_kutta_method lsrk;
@@ -42,8 +44,9 @@ LSRungeKuttaIntegrator::LSRungeKuttaIntegrator(
   rk_integrator.get_coefficients(ai, bi, ci);
 }
 
+template <typename VectorType, typename Operator>
 unsigned int
-LSRungeKuttaIntegrator::n_stages() const
+LSRungeKuttaIntegrator<VectorType,Operator>::n_stages() const
 {
   return bi.size();
 }
@@ -58,7 +61,8 @@ LSRungeKuttaIntegrator::n_stages() const
 // since in this implementation I mantain al Ki up to the computation of the new
 // solution
 template <typename VectorType, typename Operator>
-void LSRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
+void LSRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
+  const Operator &pde_operator,
   const double    current_time,
   const double    time_step,
   VectorType &    solution,
@@ -90,8 +94,9 @@ void LSRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
     }
 }
 
-
-SSPRungeKuttaIntegrator::SSPRungeKuttaIntegrator(const RungeKuttaScheme scheme)
+template <typename VectorType, typename Operator>
+SSPRungeKuttaIntegrator<VectorType,Operator>::SSPRungeKuttaIntegrator(
+  const RungeKuttaScheme scheme)
 {
   switch(scheme)
   {
@@ -131,114 +136,22 @@ SSPRungeKuttaIntegrator::SSPRungeKuttaIntegrator(const RungeKuttaScheme scheme)
 // This is my version of perform_time_step. I have a different structure of 
 // Butcher tableau (do not have the assumption on aij and bi that characterizes
 // lsrk schemese introduced in step 67). I write a function that works on all
-// general three step Runge Kutta. The implementation with nested if may not be
-// the most elegant one, but for now I will keep this 
+// SSP Runge Kutta, that have a different property, namely the fact that
+// (indexes start from 1 for a and b, start from 0 for vector):
+// - for SSP22:
+//    - b[1]/a[2][1] = factor[1]
+// - for SSP33:
+//    - a[3][1] * a[2][1] = a[3][2] = factor[1]
+//    - b[2]/a[3][2] = b[1]/(a[3][2] * a[2][1]) = b[3] = factor [2]
 template <typename VectorType, typename Operator>
-void SSPRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
+void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
+  const Operator &pde_operator,
   const double    current_time,
   const double    time_step,
   VectorType &    solution,
   VectorType &    copy_solution,
   VectorType &    vec_ki) const
 {
-  // This is the classical implementation
-
-  // (void) vec_ri;
-  // (void) vec_ki;
-  // unsigned int n_stages = bi.size();
-  // stage 1
-  // VectorType k1;
-  // k1.reinit(solution);
-  // pde_operator.apply(current_time+ci[0]*time_step,solution,k1);
-  // if(n_stages == 1)
-  // {
-  //   //u^{n+1}=u^n + b_1 k_1
-  //   solution.add(bi[0]*time_step, k1);
-  // }
-  // else
-  // {
-  //   //stage 2
-  //   VectorType k2;
-  //   k2.reinit(solution);
-  //   // Here I will define a temp vector that will be used to store
-  //   // u^n + \sum_{i=1}^{stage-1} \Delta t a[stage][i] ki
-  //   VectorType tmp;
-  //   tmp.reinit(solution);
-  //   tmp=solution;
-  //   tmp.add(aij[0]*time_step,k1);
-  //   pde_operator.apply(current_time+ci[1]*time_step, tmp, k2);
-  //   if(n_stages == 2)
-  //   {
-  //     //u^{n+1}=u^n + b_1 k_1 + b_2 k_2
-  //     solution.add(bi[0]*time_step,k1);
-  //     solution.add(bi[1]*time_step,k2);
-  //   }
-  //   else
-  //   {
-  //     //stage 3
-  //     VectorType k3;
-  //     k3.reinit(solution);
-  //     tmp=solution;
-  //     tmp.add(aij[1]*time_step, k1);
-  //     tmp.add(aij[2]*time_step, k2);
-  //     pde_operator.apply(current_time + ci[2]*time_step, tmp, k3);
-  //     //u^{n+1}=u^n + b1 k1 + b2 k2 + b3 k3
-  //     solution.add(bi[0]*time_step,k1);
-  //     solution.add(bi[1]*time_step,k2);
-  //     solution.add(bi[2]*time_step,k3);
-  //   }
-  // }
-
-  // This is the implementation to comply with filtering technique
-
-  // (void) vec_ri;
-  // (void) vec_ki;
-  // unsigned int n_stages = bi.size();
-
-  // VectorType copy_solution;
-  // copy_solution.reinit(solution);
-  // copy_solution = solution;
-  // VectorType k;
-  // k.reinit(solution);
-
-  // // stage 1
-  // pde_operator.apply(current_time + ci[0] * time_step, solution, k);
-  // if(n_stages == 1)
-  // {
-  //   solution.add(bi[0]*time_step, k);
-  //   // filter solution
-  // }
-  // else
-  // {
-  //   solution.add(aij[0]*time_step, k);
-  //   // filter solution
-  //   //stage 2
-  //   pde_operator.apply(current_time + ci[1] * time_step, solution, k);
-  //   if(n_stages == 2)
-  //   {
-  //     double factor = bi[0]/aij[0];
-  //     solution*=factor;
-  //     solution.add(1-factor, copy_solution);
-  //     solution.add(bi[1]*time_step, k);
-  //     // filter solution
-  //   }
-  //   else
-  //   {
-  //     double factor = aij[1]*aij[0];
-  //     solution *=factor;
-  //     solution.add(1-factor, copy_solution);
-  //     solution.add(aij[2]*time_step, k);
-  //     // filter solution
-  //     pde_operator.apply(current_time + ci[2]*time_step, solution, k);
-  //     factor = bi[1]/aij[2]; // =bi[0]/(aij[0]*aij[1])
-  //     solution *= factor;
-  //     solution.add(1-factor, copy_solution);
-  //     solution.add(bi[2]*time_step,k);
-  //     // filter solution
-  //   }
-  // }
-
-  // This is a loop implementation of the former
   copy_solution.reinit(solution);
   copy_solution=solution;
   vec_ki.reinit(solution);
@@ -255,59 +168,23 @@ void SSPRungeKuttaIntegrator::perform_time_step(const Operator &pde_operator,
   
 }
 
+template <typename VectorType, typename Operator>
 unsigned int
-SSPRungeKuttaIntegrator::n_stages() const
+SSPRungeKuttaIntegrator<VectorType,Operator>::n_stages() const
 {
   return factor.size();
 }
 
 
 //Instantiations of the template function
-template void LSRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,0,2>>(const EulerianSprayOperator<2,0,2> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;
 
-template void LSRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,1,3>>(const EulerianSprayOperator<2,1,3> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;
 
-
-template void LSRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,2,4>>(const EulerianSprayOperator<2,2,4> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
-
-template void SSPRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,0,2>>(const EulerianSprayOperator<2,0,2> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
-
-template void SSPRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,1,3>>(const EulerianSprayOperator<2,1,3> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
-
-template void SSPRungeKuttaIntegrator::perform_time_step<SolutionType,
-  EulerianSprayOperator<2,2,4>>(const EulerianSprayOperator<2,2,4> &,
-    const double,
-    const double,
-    SolutionType &,
-    SolutionType &,
-    SolutionType &) const;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;

@@ -3,6 +3,7 @@
 #include"RungeKuttaIntegrator.h"
 #include"Functions.h"
 #include"InlinedFunctions.h"
+
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/grid/tria_description.h>
 #include<deal.II/grid/grid_tools.h>
@@ -11,7 +12,7 @@
 #include<deal.II/numerics/vector_tools.h>
 #include<deal.II/numerics/data_out.h>
 
-
+#include<memory>
 #include<iostream>
 
 
@@ -117,6 +118,19 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
 template<int dim>
 void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
 {
+  if(testcase==1)
+  {
+  const std::array<double, 3> errors =
+      eulerian_spray_operator.compute_errors(FinalSolution<dim>(), solution);
+    const std::string quantity_name = "error";
+
+  pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
+        << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
+        << ", " << quantity_name << " rho: " << std::setprecision(4)
+        << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
+        << std::setw(10) << errors[1] << std::endl;
+  }
+
   {
     TimerOutput::Scope t(timer, "output");
 
@@ -183,7 +197,24 @@ void EulerianSprayProblem<dim>::run()
 
   make_grid_and_dofs();
 
-  const SSPRungeKuttaIntegrator integrator(scheme);
+  // const SSPRungeKuttaIntegrator integrator(scheme);
+  std::unique_ptr<RungeKuttaIntegrator<SolutionType, 
+    EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>
+      integrator;
+  if(scheme == forward_euler || scheme==ssp_stage_2_order_2 ||
+    scheme==ssp_stage_3_order_3)
+    integrator =
+      std::make_unique<SSPRungeKuttaIntegrator
+        <SolutionType,
+          EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>(scheme);
+  else
+    integrator =
+      std::make_unique<LSRungeKuttaIntegrator
+        <SolutionType,
+          EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>(scheme);
+
+
+
   
 
   SolutionType rk_register1;
@@ -237,11 +268,14 @@ void EulerianSprayProblem<dim>::run()
     // Here the integration in time is performed by the integrator
     {
       // TODO: uncomment this for varying time step
+      // For the moment with polynomials of grade 1 the time step becomes too
+      // too small
+
       // if(timestep_number % 5 == 0)
       //   time_step = CFL /std::pow((2*fe_degree+1),2) * min_vertex_distance *
-      //     integrator.n_stages() / Utilities::truncate_to_n_digits(
+      //     integrator->n_stages() / Utilities::truncate_to_n_digits(
       //       eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
-      integrator.perform_time_step(eulerian_spray_operator,
+      integrator->perform_time_step(eulerian_spray_operator,
         time,
         time_step,
         solution,

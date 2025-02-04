@@ -110,6 +110,27 @@ double ExternalFlux<dim>::value(const Point<dim> & p,
 
   switch(testcase)
   {
+    case 2:
+    {
+      if(component==0)
+        return
+      if(component==1)
+      if(component==2)
+    }
+    default:
+      Assert(false, ExcNotImplemented());
+  }
+}
+
+
+template<int dim>
+double ExternalFlux<dim>::value(const Point<dim> & p,
+  const unsigned int component) const
+{
+  const double t = this->get_time();
+
+  switch(testcase)
+  {
     case 4:
     {
       (void) t;
@@ -125,13 +146,9 @@ double ExternalFlux<dim>::value(const Point<dim> & p,
 }
 
 template class InitialSolution<2>;
-template class InitialSolution<3>;
 
 template class FinalSolution<2>;
-template class FinalSolution<3>;
 
 template class DirichletFunction<2>;
-template class DirichletFunction<3>;
 
 template class ExternalFlux<2>;
-template class ExternalFlux<3>;
