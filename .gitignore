@@ -31,20 +31,11 @@
 *.out
 *.app
 
-#Makefile (since I will use CMake to generate it)
-Makefile
+#build folder
+build/
 
-#CMake stuff
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
+#cmake stuff
 compile_commands.json
-
-#The executable, which has no extension
-main
-
-#The results' directory
-results/
 
 #VSCode stuff
 .vscode/

@@ -1,0 +1,25 @@
+#Listing of parameteres
+
+subsection Problem parameters
+  set testcase = 1 #unsigned int testcase = 2; 
+#  set finite element degree = 0 #int fe_degree = 0;
+  set number of elements in x direction = 400 # int n_el_x_direction = 400;
+  set final time = 0.5
+  set snapshot instant = 0.05 # double snapshot = 0.05;
+end
+
+subsection Integrator parameters
+# Options for Runge Kutta scheme:
+#  lsrk_stage_5_order_4,
+#  lsrk_stage_7_order_4,
+#  lsrk_stage_3_order_3, 
+#  lsrk_stage_9_order_5,
+#  forward_euler,
+#  ssp_stage_2_order_2,
+#  ssp_stage_3_order_3,
+  set Runge Kutta scheme = ssp_stage_3_order_3
+end
+
+subsection Operator parameters
+  set numerical flux type= local_lax_friedrichs
+end

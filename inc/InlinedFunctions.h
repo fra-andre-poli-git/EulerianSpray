@@ -66,7 +66,8 @@ inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Number>
 eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   const Tensor<1, dim + 1, Number> & w_plus,
-  const Tensor<1, dim, Number> & normal)
+  const Tensor<1, dim, Number> & normal,
+  const NumericalFlux numerical_flux_type)
 {
   const auto velocity_minus = eulerian_spray_velocity<dim>(w_minus);
   const auto velocity_plus = eulerian_spray_velocity<dim>(w_plus);

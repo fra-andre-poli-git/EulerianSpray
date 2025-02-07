@@ -3,6 +3,8 @@
 #include"RungeKuttaIntegrator.h"
 #include"Functions.h"
 #include"InlinedFunctions.h"
+#include"Parameters.h"
+
 
 #include<deal.II/grid/grid_generator.h>
 #include<deal.II/grid/tria_description.h>
@@ -16,10 +18,11 @@
 #include<iostream>
 
 
-template <int dim>
-EulerianSprayProblem<dim>::EulerianSprayProblem():
-    pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),    
-    fe(FE_DGQ<dim>(fe_degree),dim+1),
+template<int dim, int degree, int n_q_points_1d>
+EulerianSprayProblem<dim, degree, n_q_points_1d>::EulerianSprayProblem(const Parameters & params):
+    pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
+    parameters(params),    
+    fe(FE_DGQ<dim>(degree),dim+1),
     // mapping only works with a degree>=2
     // mapping(fe_degree >= 2 ? fe_degree : 2),
     mapping(),
@@ -27,22 +30,21 @@ EulerianSprayProblem<dim>::EulerianSprayProblem():
     time(0),
     time_step(0),
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
-    eulerian_spray_operator(timer)
-    {}
+    eulerian_spray_operator(timer){}
 
-template <int dim>
-void EulerianSprayProblem<dim>::make_grid_and_dofs()
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayProblem<dim, degree, n_q_points_1d>::make_grid_and_dofs()
 {
   // In step 67 this is a global variable. I may opt for a solution like 
   // Felotti's one, which uses a parameter memeber and make it
   // parameters.testcase
-  switch(testcase)
+  switch(parameters.testcase)
   {
     case 1:{
       // Note the fact that last argument is true, therefore we get different
       // boundary_id for the four boundaries
       GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {n_el_x_direction,5},
+        {parameters.n_el_x_direction,5},
         Point<dim>(-1,0),
         Point<dim>(1,0.1),
         true);
@@ -61,14 +63,14 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
 
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-
-      final_time = 0.5;
+      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      final_time = parameters.final_time;
       break;
     }
     case 2:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {n_el_x_direction,5},
+        {parameters.n_el_x_direction,5},
         Point<dim>(-1,0),
         Point<dim>(1,0.1),
         true);
@@ -83,18 +85,23 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
 
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-      final_time = 0.5;
+      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      final_time = parameters.final_time;
       break;
     }
     case 3:
     {
-      GridGenerator::hyper_cube(triangulation, -0.5,0.5, true);
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
       eulerian_spray_operator.set_neumann_boundary(3);
-      final_time = 1;
-      triangulation.refine_global(n_global_refinements);
+      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      final_time = parameters.final_time;
       break;
     }
     case 4:
@@ -111,17 +118,19 @@ void EulerianSprayProblem<dim>::make_grid_and_dofs()
   std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
             << " ( = " << (dim + 1) << " [vars] x "
             << triangulation.n_global_active_cells() << " [cells] x "
-            << Utilities::pow(fe_degree + 1, dim) << " [dofs/cell/var] )"
+            << Utilities::pow(degree + 1, dim) << " [dofs/cell/var] )"
             << std::endl;
 }
 
-template<int dim>
-void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayProblem<dim, degree, n_q_points_1d>::output_results(
+  const unsigned int result_number)
 {
-  if(testcase==1)
+  if(parameters.testcase==1)
   {
   const std::array<double, 3> errors =
-      eulerian_spray_operator.compute_errors(FinalSolution<dim>(), solution);
+      eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
+        solution);
     const std::string quantity_name = "error";
 
   pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
@@ -178,8 +187,8 @@ void EulerianSprayProblem<dim>::output_results(const unsigned int result_number)
   }
 }
 
-template <int dim>
-void EulerianSprayProblem<dim>::run()
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayProblem<dim, degree, n_q_points_1d>::run()
 {
   {
     const unsigned int n_vect_number = VectorizedArray<Number>::size();
@@ -197,21 +206,21 @@ void EulerianSprayProblem<dim>::run()
 
   make_grid_and_dofs();
 
-  // const SSPRungeKuttaIntegrator integrator(scheme);
+  // const SSPRungeKuttaIntegrator integrator(parameters.scheme);
   std::unique_ptr<RungeKuttaIntegrator<SolutionType, 
-    EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>
+    EulerianSprayOperator<dim,degree,n_q_points_1d>>>
       integrator;
-  if(scheme == forward_euler || scheme==ssp_stage_2_order_2 ||
-    scheme==ssp_stage_3_order_3)
+  if(parameters.scheme == forward_euler || parameters.scheme==ssp_stage_2_order_2 ||
+    parameters.scheme==ssp_stage_3_order_3)
     integrator =
       std::make_unique<SSPRungeKuttaIntegrator
         <SolutionType,
-          EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>(scheme);
+          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme);
   else
     integrator =
       std::make_unique<LSRungeKuttaIntegrator
         <SolutionType,
-          EulerianSprayOperator<dim,fe_degree,n_q_points_1d>>>(scheme);
+          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme);
 
 
 
@@ -226,13 +235,13 @@ void EulerianSprayProblem<dim>::run()
   // Step 67 does this projecting the exact solution onto the solution vector
   // but I don't have an exact solution for every time step, therefore I use the
   // initial solution
-  eulerian_spray_operator.project(InitialSolution<dim>(), solution);
+  eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
 
   //This small chunk aims at finding h, the smallest distance between two nodes
   double min_vertex_distance = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction
-  if(testcase==1 || testcase==2)
+  if(parameters.testcase==1 || parameters.testcase==2)
   {
     for(const auto & cell : triangulation.active_cell_iterators())
       min_vertex_distance = 
@@ -252,7 +261,7 @@ void EulerianSprayProblem<dim>::run()
     Utilities::MPI::min(min_vertex_distance, MPI_COMM_WORLD);
   double CFL = 1;
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
-  time_step = CFL/std::pow((fe_degree+1),2) * min_vertex_distance;
+  time_step = CFL/std::pow((degree+1),2) * min_vertex_distance;
   pcout << "Time step size: " << time_step
     << ", minimal h: " << min_vertex_distance
     << std::endl
@@ -283,22 +292,22 @@ void EulerianSprayProblem<dim>::run()
         rk_register2);
     }
     std::cout<<"Performed timestep at time: "<<time<<std::endl;
-    if (static_cast<int>(time / snapshot) !=
-              static_cast<int>((time - time_step) / snapshot) ||
+    if (static_cast<int>(time / parameters.snapshot) !=
+              static_cast<int>((time - time_step) / parameters.snapshot) ||
             time >= final_time - 1e-12)
           output_results(
-            static_cast<unsigned int>(std::round(time / snapshot)));
+            static_cast<unsigned int>(std::round(time / parameters.snapshot)));
     time += time_step;
   }
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;
 }
 
-template <int dim>
-EulerianSprayProblem<dim>::Postprocessor::Postprocessor(){}
+template<int dim, int degree, int n_q_points_1d>
+EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::Postprocessor(){}
 
-template <int dim>
-void EulerianSprayProblem<dim>::Postprocessor::evaluate_vector_field(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::evaluate_vector_field(
   const DataPostprocessorInputs::Vector<dim> &inputs,
   std::vector<Vector<double>> &computed_quantities) const
 {
@@ -319,8 +328,8 @@ void EulerianSprayProblem<dim>::Postprocessor::evaluate_vector_field(
   }
 }
 
-template<int dim>
-std::vector<std::string> EulerianSprayProblem<dim>::Postprocessor::get_names()
+template<int dim, int degree, int n_q_points_1d>
+std::vector<std::string> EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_names()
   const
 {
   std::vector<std::string> names;
@@ -330,9 +339,9 @@ std::vector<std::string> EulerianSprayProblem<dim>::Postprocessor::get_names()
   return names;
 }
 
-template<int dim>
+template<int dim, int degree, int n_q_points_1d>
 std::vector<DataComponentInterpretation::DataComponentInterpretation>
-  EulerianSprayProblem<dim>::Postprocessor::get_data_component_interpretation()
+  EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_data_component_interpretation()
   const
 {
   std::vector<DataComponentInterpretation::DataComponentInterpretation>
@@ -345,12 +354,12 @@ std::vector<DataComponentInterpretation::DataComponentInterpretation>
   return interpretation;
 }
 
-template<int dim>
+template<int dim, int degree, int n_q_points_1d>
 UpdateFlags
-EulerianSprayProblem<dim>::Postprocessor::get_needed_update_flags() const
+EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_needed_update_flags() const
 {
   return update_values;
 }
 
 // Instantiations of the template
-template class EulerianSprayProblem<2>;
+template class EulerianSprayProblem<2,0,2>;

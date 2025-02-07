@@ -56,8 +56,12 @@ class EulerianSprayOperator{
 
     void initialize_vector(SolutionType &vector) const;
 
+    void set_numerical_flux(const NumericalFlux &);
+
   private:
     MatrixFree<dim, Number> data;
+
+    NumericalFlux numerical_flux_type;
 
     TimerOutput & timer;
 

@@ -6,6 +6,8 @@
 #include"TypesDefinition.h"
 #include"EulerianSprayOperator.h"
 #include"InlinedFunctions.h"
+#include"Parameters.h"
+
 #include<deal.II/grid/tria.h>
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
@@ -17,9 +19,10 @@
 
 
 
-template<int dim> class EulerianSprayProblem{
+template<int dim, int degree, int n_q_points_1d>
+class EulerianSprayProblem{
   public:
-    EulerianSprayProblem();
+    EulerianSprayProblem(const Parameters &);
 
     void run();
 
@@ -28,15 +31,20 @@ template<int dim> class EulerianSprayProblem{
     void make_grid_and_dofs();
 
     void output_results(const unsigned int result_number);
+
+
     
     SolutionType solution;
 
     ConditionalOStream pcout;
     // TODO: put an if to get distributed triangulation
     Triangulation<dim> triangulation;
+    Parameters parameters;
     const FESystem<dim> fe;
     MappingQ1<dim> mapping;
     DoFHandler<dim> dof_handler;
+
+
 
     double time;
 
@@ -46,7 +54,7 @@ template<int dim> class EulerianSprayProblem{
 
     double final_time;
 
-    EulerianSprayOperator<dim,fe_degree,n_q_points_1d> eulerian_spray_operator;
+    EulerianSprayOperator<dim,degree,n_q_points_1d> eulerian_spray_operator;
     
     class Postprocessor : public DataPostprocessor<dim>{
       public:

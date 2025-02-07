@@ -34,8 +34,8 @@ template <int dim, int degree, int n_points_1d>
   const std::vector<const DoFHandler<dim> *> dof_handlers = {&dof_handler};
   const AffineConstraints<double> dummy;
   const std::vector<const AffineConstraints<double> *> constraints = {&dummy};
-  const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_q_points_1d),
-                                                  QGauss<1>(fe_degree + 1)};
+  const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_points_1d),
+                                                  QGauss<1>(degree + 1)};
 
   typename MatrixFree<dim, Number>::AdditionalData additional_data;
   additional_data.mapping_update_flags =
@@ -406,7 +406,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
       const auto numerical_flux =
         eulerian_spray_numerical_flux<dim>(phi_m.get_value(q),
           phi_p.get_value(q),
-          phi_m.normal_vector(q));
+          phi_m.normal_vector(q),
+          numerical_flux_type);
       phi_m.submit_value(-numerical_flux, q);
       phi_p.submit_value(numerical_flux, q);
     }
@@ -452,13 +453,24 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
           ExcMessage("Unknown boundary id, did you set a boundary condition"
             " for this part of the domain boundary?"));
 
-      auto flux = eulerian_spray_numerical_flux<dim>(w_m, w_p, normal);
+      auto flux = eulerian_spray_numerical_flux<dim>(w_m,
+        w_p,
+        normal,
+        numerical_flux_type);
 
       phi.submit_value(-flux, q);
     }
      phi.integrate_scatter(EvaluationFlags::values, dst);
   }
 }
+
+template<int dim, int degree, int n_points_1d>
+void EulerianSprayOperator<dim, degree, n_points_1d>::set_numerical_flux(
+  const NumericalFlux & flux)
+{
+  numerical_flux_type = flux;
+}
+
 
 
 // This is the implementation of the two helper function (defined here since
@@ -493,7 +505,6 @@ evaluate_function(const Function<dim> &                      function,
   }
   return result;
 }
-
 
 //Instantiations of the template
 template class EulerianSprayOperator<2, 0, 2>;
