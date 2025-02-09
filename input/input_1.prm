@@ -1,11 +1,10 @@
 #Listing of parameteres
 
 subsection Problem parameters
-  set testcase = 1 #unsigned int testcase = 2; 
-#  set finite element degree = 0 #int fe_degree = 0;
-  set number of elements in x direction = 400 # int n_el_x_direction = 400;
+  set testcase = 1
+  set number of elements in x direction = 400 
   set final time = 0.5
-  set snapshot instant = 0.05 # double snapshot = 0.05;
+  set snapshot instant = 0.00125
 end
 
 subsection Integrator parameters
@@ -21,5 +20,8 @@ subsection Integrator parameters
 end
 
 subsection Operator parameters
+# Options for numerical flux:
+#  local_lax_friedrichs
+#  godunov
   set numerical flux type= local_lax_friedrichs
 end

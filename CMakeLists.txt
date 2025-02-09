@@ -22,8 +22,8 @@ set(TARGET_SRC ${TARGET_SRC} ${TARGET_INC})
 
 cmake_minimum_required(VERSION 3.13.4)
 # Find dealii
-find_package(deal.II 9.3.1 #u/sw/toolchains/gcc-glibc/11.2.0/pkgs/dealii 
-  HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
+find_package(deal.II 9.5.1
+  HINTS $ENV{mkDealiiPrefix} ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 if(NOT ${deal.II_FOUND})
   message(FATAL_ERROR "\n"

@@ -20,6 +20,7 @@ using SolutionType = LinearAlgebra::distributed::Vector<Number>;
 enum NumericalFlux
 {
   local_lax_friedrichs,
+  godunov,
 };
 
 enum RungeKuttaScheme

@@ -13,8 +13,8 @@
 // It must be 2, since the functions of the output are not meant to be used in
 // dimension 1.
 constexpr unsigned int dimension=2;
-constexpr unsigned int finite_element_degree = 0;
-constexpr unsigned int n_q_points_1d = finite_element_degree + 2;
+constexpr unsigned int finite_element_degree = 1;
+//constexpr unsigned int n_q_points_1d = finite_element_degree + 2;
 
 
 int main(int argc, char ** argv){
@@ -28,8 +28,8 @@ int main(int argc, char ** argv){
     Parameters parameters;
     parameters.parse_parameters(prm);
     // TODO verbose_cout
-    EulerianSprayProblem<dimension,finite_element_degree,
-      n_q_points_1d> eulerian_spray_problem(parameters);
+    EulerianSprayProblem<dimension,finite_element_degree>
+      eulerian_spray_problem(parameters);
     eulerian_spray_problem.run();
   }
   catch (std::exception &exc)

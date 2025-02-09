@@ -406,7 +406,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
       const auto numerical_flux =
         eulerian_spray_numerical_flux<dim>(phi_m.get_value(q),
           phi_p.get_value(q),
-          phi_m.normal_vector(q),
+          phi_m.get_normal_vector(q),
           numerical_flux_type);
       phi_m.submit_value(-numerical_flux, q);
       phi_p.submit_value(numerical_flux, q);
@@ -433,7 +433,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
     for( unsigned int q = 0; q < phi.n_q_points; ++q)
     {
       const auto w_m = phi.get_value(q);
-      const auto normal = phi.normal_vector(q); 
+      const auto normal =  phi.normal_vector(q);
 
       Tensor<1, dim + 1, VectorizedArray<Number>> w_p;
       const auto boundary_id = data.get_boundary_id(face);

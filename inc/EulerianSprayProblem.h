@@ -1,8 +1,6 @@
 #ifndef EULERIAN_SPRAY_PROBLEM_HH
 #define EULERIAN_SPRAY_PROBLEM_HH
 
-// here my machine takes the header files from usr/include/deal.II
-// the ones in the mk modules are in /u/sw/toolchains/gcc-glibc/11.2.0/pkgs/dealii/9.3.1/include/deal.II
 #include"TypesDefinition.h"
 #include"EulerianSprayOperator.h"
 #include"InlinedFunctions.h"
@@ -19,7 +17,7 @@
 
 
 
-template<int dim, int degree, int n_q_points_1d>
+template<int dim, int degree>
 class EulerianSprayProblem{
   public:
     EulerianSprayProblem(const Parameters &);
@@ -32,8 +30,6 @@ class EulerianSprayProblem{
 
     void output_results(const unsigned int result_number);
 
-
-    
     SolutionType solution;
 
     ConditionalOStream pcout;
@@ -44,8 +40,6 @@ class EulerianSprayProblem{
     MappingQ1<dim> mapping;
     DoFHandler<dim> dof_handler;
 
-
-
     double time;
 
     double time_step;
@@ -54,6 +48,7 @@ class EulerianSprayProblem{
 
     double final_time;
 
+    static constexpr int n_q_points_1d = degree +2;
     EulerianSprayOperator<dim,degree,n_q_points_1d> eulerian_spray_operator;
     
     class Postprocessor : public DataPostprocessor<dim>{

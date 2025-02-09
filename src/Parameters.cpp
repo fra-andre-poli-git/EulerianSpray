@@ -55,7 +55,7 @@ void Parameters::declare_parameters(ParameterHandler & prm)
   {
     prm.declare_entry("numerical flux type",
       "local_lax_friedrichs",
-      Patterns::MultipleSelection("local_lax_friedrichs"),
+      Patterns::MultipleSelection("local_lax_friedrichs|godunov"),
       "Type of the numerical flux used between the interfaces of the elements");
   }
   prm.leave_subsection();

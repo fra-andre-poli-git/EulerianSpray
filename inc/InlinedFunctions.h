@@ -79,14 +79,17 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   {
     case local_lax_friedrichs:
     {
-      // TODO: implement lambda for our local Lax Friedrichs flux
-      auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
-      auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
-      const auto delta = std::max(std::abs(v_p_times_n ),
-        std::abs(v_m_times_n));
-      
+      // auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
+      // auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
+      // const auto delta = std::max(v_p_times_n.norm() ,
+      //   std::abs(v_m_times_n));
+      const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
-              0.5 * delta * (w_minus - w_plus);
+        0.5 * delta * (w_minus - w_plus);
+    }
+    case godunov:
+    {
+      
     }
     default:{
       Assert(false, ExcNotImplemented());

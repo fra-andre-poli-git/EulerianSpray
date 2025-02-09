@@ -18,8 +18,8 @@
 #include<iostream>
 
 
-template<int dim, int degree, int n_q_points_1d>
-EulerianSprayProblem<dim, degree, n_q_points_1d>::EulerianSprayProblem(const Parameters & params):
+template<int dim, int degree>
+EulerianSprayProblem<dim, degree>::EulerianSprayProblem(const Parameters & params):
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
     parameters(params),    
     fe(FE_DGQ<dim>(degree),dim+1),
@@ -32,8 +32,8 @@ EulerianSprayProblem<dim, degree, n_q_points_1d>::EulerianSprayProblem(const Par
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
     eulerian_spray_operator(timer){}
 
-template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayProblem<dim, degree, n_q_points_1d>::make_grid_and_dofs()
+template<int dim, int degree>
+void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
   // In step 67 this is a global variable. I may opt for a solution like 
   // Felotti's one, which uses a parameter memeber and make it
@@ -122,23 +122,23 @@ void EulerianSprayProblem<dim, degree, n_q_points_1d>::make_grid_and_dofs()
             << std::endl;
 }
 
-template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayProblem<dim, degree, n_q_points_1d>::output_results(
+template<int dim, int degree>
+void EulerianSprayProblem<dim, degree>::output_results(
   const unsigned int result_number)
 {
-  if(parameters.testcase==1)
-  {
-  const std::array<double, 3> errors =
-      eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
-        solution);
-    const std::string quantity_name = "error";
+  // if(parameters.testcase==1)
+  // {
+  // const std::array<double, 3> errors =
+  //     eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
+  //       solution);
+  //   const std::string quantity_name = "error";
 
-  pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
-        << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
-        << ", " << quantity_name << " rho: " << std::setprecision(4)
-        << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
-        << std::setw(10) << errors[1] << std::endl;
-  }
+  // pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
+  //       << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
+  //       << ", " << quantity_name << " rho: " << std::setprecision(4)
+  //       << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
+  //       << std::setw(10) << errors[1] << std::endl;
+  // }
 
   {
     TimerOutput::Scope t(timer, "output");
@@ -187,8 +187,8 @@ void EulerianSprayProblem<dim, degree, n_q_points_1d>::output_results(
   }
 }
 
-template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayProblem<dim, degree, n_q_points_1d>::run()
+template<int dim, int degree>
+void EulerianSprayProblem<dim, degree>::run()
 {
   {
     const unsigned int n_vect_number = VectorizedArray<Number>::size();
@@ -303,11 +303,11 @@ void EulerianSprayProblem<dim, degree, n_q_points_1d>::run()
   pcout<<std::endl;
 }
 
-template<int dim, int degree, int n_q_points_1d>
-EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::Postprocessor(){}
+template<int dim, int degree>
+EulerianSprayProblem<dim, degree>::Postprocessor::Postprocessor(){}
 
-template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::evaluate_vector_field(
+template<int dim, int degree>
+void EulerianSprayProblem<dim, degree>::Postprocessor::evaluate_vector_field(
   const DataPostprocessorInputs::Vector<dim> &inputs,
   std::vector<Vector<double>> &computed_quantities) const
 {
@@ -328,8 +328,8 @@ void EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::evaluate_v
   }
 }
 
-template<int dim, int degree, int n_q_points_1d>
-std::vector<std::string> EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_names()
+template<int dim, int degree>
+std::vector<std::string> EulerianSprayProblem<dim, degree>::Postprocessor::get_names()
   const
 {
   std::vector<std::string> names;
@@ -339,9 +339,9 @@ std::vector<std::string> EulerianSprayProblem<dim, degree, n_q_points_1d>::Postp
   return names;
 }
 
-template<int dim, int degree, int n_q_points_1d>
+template<int dim, int degree>
 std::vector<DataComponentInterpretation::DataComponentInterpretation>
-  EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_data_component_interpretation()
+  EulerianSprayProblem<dim, degree>::Postprocessor::get_data_component_interpretation()
   const
 {
   std::vector<DataComponentInterpretation::DataComponentInterpretation>
@@ -354,12 +354,14 @@ std::vector<DataComponentInterpretation::DataComponentInterpretation>
   return interpretation;
 }
 
-template<int dim, int degree, int n_q_points_1d>
+template<int dim, int degree>
 UpdateFlags
-EulerianSprayProblem<dim, degree, n_q_points_1d>::Postprocessor::get_needed_update_flags() const
+EulerianSprayProblem<dim, degree>::Postprocessor::get_needed_update_flags() const
 {
   return update_values;
 }
 
 // Instantiations of the template
-template class EulerianSprayProblem<2,0,2>;
+template class EulerianSprayProblem<2,0>;
+template class EulerianSprayProblem<2,1>;
+template class EulerianSprayProblem<2,2>;
