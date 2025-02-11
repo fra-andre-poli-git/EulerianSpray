@@ -23,14 +23,12 @@ EulerianSprayProblem<dim, degree>::EulerianSprayProblem(const Parameters & param
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
     parameters(params),    
     fe(FE_DGQ<dim>(degree),dim+1),
-    // mapping only works with a degree>=2
-    // mapping(fe_degree >= 2 ? fe_degree : 2),
     mapping(),
     dof_handler(triangulation),
     time(0),
     time_step(0),
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
-    eulerian_spray_operator(timer){}
+    eulerian_spray_operator(timer,dof_handler){}
 
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
@@ -259,9 +257,11 @@ void EulerianSprayProblem<dim, degree>::run()
   // with MPI here I have to make the minimum over all processors
   min_vertex_distance =
     Utilities::MPI::min(min_vertex_distance, MPI_COMM_WORLD);
-  double CFL = 1;
+  double CFL = 1./2;
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
-  time_step = CFL/std::pow((degree+1),2) * min_vertex_distance;
+   time_step = CFL/
+    Utilities::truncate_to_n_digits(
+      eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
   pcout << "Time step size: " << time_step
     << ", minimal h: " << min_vertex_distance
     << std::endl
@@ -276,14 +276,6 @@ void EulerianSprayProblem<dim, degree>::run()
     ++timestep_number;
     // Here the integration in time is performed by the integrator
     {
-      // TODO: uncomment this for varying time step
-      // For the moment with polynomials of grade 1 the time step becomes too
-      // too small
-
-      // if(timestep_number % 5 == 0)
-      //   time_step = CFL /std::pow((2*fe_degree+1),2) * min_vertex_distance *
-      //     integrator->n_stages() / Utilities::truncate_to_n_digits(
-      //       eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
       integrator->perform_time_step(eulerian_spray_operator,
         time,
         time_step,
@@ -291,13 +283,19 @@ void EulerianSprayProblem<dim, degree>::run()
         rk_register1,
         rk_register2);
     }
-    std::cout<<"Performed timestep at time: "<<time<<std::endl;
-    if (static_cast<int>(time / parameters.snapshot) !=
-              static_cast<int>((time - time_step) / parameters.snapshot) ||
-            time >= final_time - 1e-12)
-          output_results(
-            static_cast<unsigned int>(std::round(time / parameters.snapshot)));
-    time += time_step;
+    pcout<<"Performed time step at time: "<<time<<
+      ", time step number: "<< timestep_number<<std::endl;
+    // if (static_cast<int>(time / parameters.snapshot) !=
+    //           static_cast<int>((time - time_step) / parameters.snapshot) ||
+    //         time >= final_time - 1e-12)
+    //   output_results(
+    //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
+    output_results(timestep_number);
+    time_step = CFL/
+      Utilities::truncate_to_n_digits(
+        eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+    pcout<<"New time step: "<<time_step<<std::endl;
+    time += time_step; 
   }
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;
@@ -329,8 +327,8 @@ void EulerianSprayProblem<dim, degree>::Postprocessor::evaluate_vector_field(
 }
 
 template<int dim, int degree>
-std::vector<std::string> EulerianSprayProblem<dim, degree>::Postprocessor::get_names()
-  const
+std::vector<std::string> EulerianSprayProblem<dim, degree>::Postprocessor::
+  get_names() const
 {
   std::vector<std::string> names;
   for(unsigned int d = 0; d < dim; ++d)
@@ -341,8 +339,8 @@ std::vector<std::string> EulerianSprayProblem<dim, degree>::Postprocessor::get_n
 
 template<int dim, int degree>
 std::vector<DataComponentInterpretation::DataComponentInterpretation>
-  EulerianSprayProblem<dim, degree>::Postprocessor::get_data_component_interpretation()
-  const
+  EulerianSprayProblem<dim, degree>::Postprocessor::
+    get_data_component_interpretation() const
 {
   std::vector<DataComponentInterpretation::DataComponentInterpretation>
     interpretation;

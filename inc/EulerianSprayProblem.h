@@ -35,9 +35,13 @@ class EulerianSprayProblem{
     ConditionalOStream pcout;
     // TODO: put an if to get distributed triangulation
     Triangulation<dim> triangulation;
+
     Parameters parameters;
+
     const FESystem<dim> fe;
+
     MappingQ1<dim> mapping;
+    
     DoFHandler<dim> dof_handler;
 
     double time;

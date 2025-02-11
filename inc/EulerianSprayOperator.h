@@ -21,8 +21,8 @@ template<int dim, int degree, int n_points_1d>
 class EulerianSprayOperator{
   public:
     static constexpr unsigned int n_quadrature_points_1d = n_points_1d;
-
-    EulerianSprayOperator(TimerOutput & timer_output); // TODO: a che serve timer_output?
+     // TODO: capire meglio a che serve timer_output
+    EulerianSprayOperator(TimerOutput & timer_output, const DoFHandler<dim> &);
 
     void reinit(const Mapping<dim> & mapping,
       const DoFHandler<dim> & dof_handler);
@@ -51,15 +51,38 @@ class EulerianSprayOperator{
       const SolutionType & solution) const;
 
 
-    double compute_cell_transport_speed(const SolutionType & solution)
-      const;   
+    double compute_cell_transport_speed(const SolutionType & solution) const;   
 
     void initialize_vector(SolutionType &vector) const;
 
     void set_numerical_flux(const NumericalFlux &);
 
+    void apply_TVB_limiter(SolutionType & solution) const;
+
+    // void apply_WENO_limiter(SolutionType & solution) const;
+
   private:
+    // MatrixFree<dim, Number> class collects all the data that is stored for
+    // the matrix free implementation.
+    // The stored data can be subdivided into three main components:
+    //  - DoFInfo: It stores how local degrees of freedom relate to global
+    //      degrees of freedom. It includes a description of constraints that
+    //      are evaluated as going through all local degrees of freedom on a
+    //      cell.
+    //  - MappingInfo: It stores the transformations from real to unit cells
+    //      that are necessary in order to build derivatives of finite element
+    //      functions and find location of quadrature weights in physical space.
+    //  - ShapeInfo: It contains the shape functions of the finite element,
+    //      evaluated on the unit cell.
     MatrixFree<dim, Number> data;
+
+    // This const reference is necessary for limiters, even though breaks the 
+    // incapsulation of the EulerianSprayOperator class inside
+    // EulerianSprayProblem
+    const DoFHandler<dim> & dof_handler;
+
+    Vector<double> shock_indicator;
+    Vector<double> jump_indicator;
 
     NumericalFlux numerical_flux_type;
 
@@ -92,6 +115,8 @@ class EulerianSprayOperator{
       SolutionType & dst,
       const SolutionType &src,
       const std::pair<unsigned int, unsigned int> & face_range) const;
+
+    void compute_shock_indicator(const SolutionType & cur_sol);
 };
 
 

@@ -143,6 +143,9 @@ SSPRungeKuttaIntegrator<VectorType,Operator>::SSPRungeKuttaIntegrator(
 // - for SSP33:
 //    - a[3][1] * a[2][1] = a[3][2] = factor[1]
 //    - b[2]/a[3][2] = b[1]/(a[3][2] * a[2][1]) = b[3] = factor [2]
+// I still use the two latter arguments, but one is to store the solution at
+// previous time step, and not vec_ri, therefore it is copy initialized from
+// solution every time step
 template <typename VectorType, typename Operator>
 void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
   const Operator &pde_operator,

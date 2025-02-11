@@ -22,12 +22,8 @@ Tensor<1, dim, Number> eulerian_spray_velocity(
   return velocity;
 }
 
-// This template function returns the Eulerian spray flux (in analogy to Euler
-// flux from step 67)
-// TODO: why I use a return type a tensor of order 1 of tensors of order 1
-// and not a tensor of order two?
+// This template function returns the Eulerian spray flux 
 template <int dim, typename Number>
-// TODO: understand why I use DEAL_II_ALWAYS_INLINE
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Tensor<1, dim, Number>>
   eulerian_spray_flux(const Tensor<1, dim+1, Number> & conserved_variables)
@@ -59,7 +55,7 @@ operator * ( const Tensor<1, n_components, Tensor<1, dim, Number>> & matrix,
 }
 
 // This function returns the numerical flux already multiplied by the normal
-// vecotr. I am using local Lax-Friedrichs, but the structure can accept other
+// vector. I am using local Lax-Friedrichs, but the structure can accept other
 // flux definitions through the switch.
 template <int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
@@ -79,17 +75,20 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   {
     case local_lax_friedrichs:
     {
-      // auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
-      // auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
-      // const auto delta = std::max(v_p_times_n.norm() ,
-      //   std::abs(v_m_times_n));
-      const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
+      auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
+      auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
+      const auto delta = std::max(std::abs(v_p_times_n) ,
+        std::abs(v_m_times_n));
+      // const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
         0.5 * delta * (w_minus - w_plus);
     }
     case godunov:
     {
-      
+      // if(velocity_plus * normal<1e-12)
+      // {
+        
+      // }
     }
     default:{
       Assert(false, ExcNotImplemented());

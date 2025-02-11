@@ -14,7 +14,6 @@
 // dimension 1.
 constexpr unsigned int dimension=2;
 constexpr unsigned int finite_element_degree = 1;
-//constexpr unsigned int n_q_points_1d = finite_element_degree + 2;
 
 
 int main(int argc, char ** argv){
