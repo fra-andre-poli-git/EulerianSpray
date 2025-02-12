@@ -1,7 +1,7 @@
 # EulerianSpray
 This is the repository of my APSC/PACS project on Eulerian Sprays.
 
-The licensing is in according to deal.ii README:
+The license is the same as that of the library, as evinced in deal.ii README:
 
 https://www.dealii.org/9.5.0/readme.html#license
 
