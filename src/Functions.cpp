@@ -102,26 +102,26 @@ double DirichletFunction<dim>::value(const Point<dim> & p,
   }
 }
 
-template<int dim>
-double ExactSolution<dim>::value(const Point<dim> & p,
-  const unsigned int component) const
-{
-  const double t = this->get_time();
+// template<int dim>
+// double ExactSolution<dim>::value(const Point<dim> & p,
+//   const unsigned int component) const
+// {
+//   const double t = this->get_time();
 
-  switch(parameters.testcase)
-  {
-    case 2:
-    {
-      if(component==0)
-        return 0.;
-      if(component==1)
-      if(component==2)
-      return 0.;
-    }
-    default:
-      Assert(false, ExcNotImplemented());
-  }
-}
+//   switch(parameters.testcase)
+//   {
+//     case 2:
+//     {
+//       if(component==0)
+//         return 0.;
+//       if(component==1)
+//       if(component==2)
+//       return 0.;
+//     }
+//     default:
+//       Assert(false, ExcNotImplemented());
+//   }
+// }
 
 
 // template<int dim>
@@ -152,6 +152,6 @@ template class FinalSolution<2>;
 
 template class DirichletFunction<2>;
 
-template class ExactSolution<2>;
+// template class ExactSolution<2>;
 
 // template class ExternalFlux<2>;

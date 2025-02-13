@@ -43,17 +43,17 @@ class DirichletFunction : public Function<dim>
     Parameters parameters;
 };
 
-template<int dim>
-class ExactSolution : public Function<dim>
-{
-  public:
-    ExactSolution(const double time, const Parameters & params):
-      Function<dim>(dim, time), parameters(params){};
-    virtual double value(const Point<dim> & p, const unsigned int component)
-      const override;
-  private:
-    Parameters parameters;
-};
+// template<int dim>
+// class ExactSolution : public Function<dim>
+// {
+//   public:
+//     ExactSolution(const double time, const Parameters & params):
+//       Function<dim>(dim, time), parameters(params){};
+//     virtual double value(const Point<dim> & p, const unsigned int component)
+//       const override;
+//   private:
+//     Parameters parameters;
+// };
 
 // template<int dim>
 // class ExternalFlux : public Function<dim>

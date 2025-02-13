@@ -6,8 +6,8 @@
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
 
-template <int dim, int degree, int n_points_1d>
-EulerianSprayOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
+template <int dim, int degree, int n_q_points_1d>
+EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
   TimerOutput & timer, const DoFHandler<dim> & dofhandler): timer(timer),
   dof_handler(dofhandler){}
 
@@ -20,7 +20,7 @@ EulerianSprayOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
 // AffineConstraints object and rather use a dummy for the
 // construction. With respect to quadrature, we want to select two different
 // ways of computing the underlying integrals: The first is a flexible one,
-// based on a template parameter `n_points_1d` (that will be assigned the
+// based on a template parameter `n_q_points_1d` (that will be assigned the
 // `n_q_points_1d` value specified at the top of this file). More accurate
 // integration is necessary to avoid the aliasing problem due to the
 // variable coefficients in the Euler operator. The second less accurate
@@ -29,15 +29,15 @@ EulerianSprayOperator<dim, degree, n_points_1d>::EulerianSprayOperator(
 // only on affine element shapes and not on deformed elements, it enables
 // the fast inversion of the mass matrix by tensor product techniques,
 // necessary to ensure optimal computational efficiency overall.
-template <int dim, int degree, int n_points_1d>
-  void EulerianSprayOperator<dim, degree, n_points_1d>::reinit(
+template <int dim, int degree, int n_q_points_1d>
+  void EulerianSprayOperator<dim, degree, n_q_points_1d>::reinit(
     const Mapping<dim> &   mapping,
     const DoFHandler<dim> &dof_handler)
 {
   const std::vector<const DoFHandler<dim> *> dof_handlers = {&dof_handler};
   const AffineConstraints<double> dummy;
   const std::vector<const AffineConstraints<double> *> constraints = {&dummy};
-  const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_points_1d),
+  const std::vector<Quadrature<1>> quadratures = {QGauss<1>(n_q_points_1d),
                                                   QGauss<1>(degree + 1)};
 
   typename MatrixFree<dim, Number>::AdditionalData additional_data;
@@ -57,8 +57,8 @@ template <int dim, int degree, int n_points_1d>
     mapping, dof_handlers, constraints, quadratures, additional_data);
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::set_neumann_boundary(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_neumann_boundary(
   const types::boundary_id boundary_id)
 {
   // TODO: it would be nice to set an assert to ensure I didn't set other
@@ -66,8 +66,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::set_neumann_boundary(
   neumann_boundaries.insert(boundary_id);
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::set_dirichlet_boundary(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_dirichlet_boundary(
   const types::boundary_id boundary_id,
   std::unique_ptr<Function<dim>> dirichlet_function)
 {
@@ -77,8 +77,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::set_dirichlet_boundary(
 }
 
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply(
   const Number current_time,
   const SolutionType & src,
   SolutionType & dst) const
@@ -113,8 +113,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::apply(
 // This function performs one stage of low storage Runge-Kutta integration. It 
 // is very similar EulerianSprayOperator::apply() with an update of the vectors
 // ki and ri used in RK
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::perform_lsrk_stage(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::perform_lsrk_stage(
   const Number current_time,
   const Number factor_solution,
   const Number factor_ai,
@@ -186,8 +186,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::perform_lsrk_stage(
 }
 
 // This function projects a function to the solution vector.
-template <int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::project(
+template <int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::project(
   const Function<dim> & function,
   SolutionType &solution) const
 {
@@ -209,48 +209,61 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::project(
   }                                                
 }
 
-template<int dim, int degree, int n_points_1d>
-std::array<double, 3>
-EulerianSprayOperator<dim, degree, n_points_1d>::compute_errors(
+
+
+template<int dim, int degree, int n_q_points_1d>
+std::array<double, 2>
+EulerianSprayOperator<dim, degree, n_q_points_1d>::compute_errors(
   const Function<dim> & function,
   const SolutionType & solution) const{
   TimerOutput::Scope t(timer, "compute errors");
-  double errors_squared[3] = {};
-  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, 0, 0);
+  double errors_squared[2] = {};
+  FEEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi(data, 0, 0);
 
-  for (unsigned int cell = 0; cell<data.n_cell_batches(); ++cell){
+  for (unsigned int cell = 0; cell<data.n_cell_batches(); ++cell)
+  {
     phi.reinit(cell);
     phi.gather_evaluate(solution, EvaluationFlags::values);
-    VectorizedArray<Number> local_errors_squared[3] = {};
-    for (unsigned int q = 0; q < phi.n_q_points; ++q){
+    VectorizedArray<Number> local_errors_squared[2] = {};
+    for (unsigned int q = 0; q < phi.n_q_points; ++q)
+    {
       const auto error = evaluate_function(function, phi.quadrature_point(q)) -
         phi.get_value(q);
       const auto JxW = phi.JxW(q);
       local_errors_squared[0] += error[0] * error[0] * JxW;
       for (unsigned int d = 0; d < dim; ++d)
         local_errors_squared[1] += (error[d + 1] * error[d + 1]) * JxW;
-
-      local_errors_squared[2] += (error[dim+1] * error[dim + 1]) * JxW;
     }
   for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell); ++v)
-    for (unsigned int d = 0; d < 3; ++d)
+    for (unsigned int d = 0; d < 2; ++d)
       errors_squared[d] += local_errors_squared[d][v];
   }
 
   Utilities::MPI::sum(errors_squared, MPI_COMM_WORLD, errors_squared);
 
-  std::array<double, 3> errors;
-  for ( unsigned int d = 0; d < 3; ++d)
+  std::array<double, 2> errors;
+  for ( unsigned int d = 0; d < 2; ++d)
     errors[d] = std::sqrt(errors_squared[d]);
 
   return errors;
 }
 
 
-
-template<int dim, int degree, int n_points_1d>
+// This function is used to compute the cell transport speed, needed to set a 
+// time step in according to CFL condition.
+// Conceptually, we want to assure that the transportation of iformation is not
+// so big that that information enters and leaves the cell within one time step.
+// For information transported along with
+// the medium, $\mathbf u$ is scaled by the mesh size,
+// so an estimate of the maximal velocity can be obtained by computing
+// $\|J^{-\mathrm T} \mathbf{u}\|_\infty$, where $J$ is the Jacobian of the
+// transformation from real to the reference domain. Note that
+// FEEvaluationBase::inverse_jacobian() returns the inverse and transpose
+// Jacobian, representing the metric term from real to reference
+// coordinates, so we do not need to transpose it again.
+template<int dim, int degree, int n_q_points_1d>
 double
-EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
+EulerianSprayOperator<dim, degree, n_q_points_1d>::compute_cell_transport_speed(
   const SolutionType & solution) const
 {
   TimerOutput::Scope t(timer, "compute transport speed");
@@ -266,37 +279,14 @@ EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
           {
             const auto solution = phi.get_value(q);
             const auto velocity = eulerian_spray_velocity<dim>(solution);
-//            const auto pressure = euler_pressure<dim>(solution);
-
             const auto inverse_jacobian = phi.inverse_jacobian(q);
             const auto convective_speed = inverse_jacobian * velocity;
             VectorizedArray<Number> convective_limit = 0.;
             for (unsigned int d = 0; d < dim; ++d)
               convective_limit =
                 std::max(convective_limit, std::abs(convective_speed[d]));
-
-            // const auto speed_of_sound =
-            //   std::sqrt(gamma * pressure * (1. / solution[0]));
-
-            Tensor<1, dim, VectorizedArray<Number>> eigenvector;
-            for (unsigned int d = 0; d < dim; ++d)
-              eigenvector[d] = 1.;
-            for (unsigned int i = 0; i < 5; ++i)
-              {
-                eigenvector = transpose(inverse_jacobian) *
-                              (inverse_jacobian * eigenvector);
-                VectorizedArray<Number> eigenvector_norm = 0.;
-                for (unsigned int d = 0; d < dim; ++d)
-                  eigenvector_norm =
-                    std::max(eigenvector_norm, std::abs(eigenvector[d]));
-                eigenvector /= eigenvector_norm;
-              }
-            const auto jac_times_ev   = inverse_jacobian * eigenvector;
-            const auto max_eigenvalue = std::sqrt(
-              (jac_times_ev * jac_times_ev) / (eigenvector * eigenvector));
             local_max =
-              std::max(local_max,
-                       /*max_eigenvalue * speed_of_sound +*/ convective_limit);
+              std::max(local_max, convective_limit);
           }
 
         for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell);
@@ -304,21 +294,20 @@ EulerianSprayOperator<dim, degree, n_points_1d>::compute_cell_transport_speed(
           for (unsigned int d = 0; d < 3; ++d)
             max_transport = std::max(max_transport, local_max[v]);
       }
-
     max_transport = Utilities::MPI::max(max_transport, MPI_COMM_WORLD);
     return max_transport;
 }
 
 
-template <int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::initialize_vector(
+template <int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::initialize_vector(
   SolutionType &vector) const
 {
   data.initialize_dof_vector(vector);
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::set_numerical_flux(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
   const NumericalFlux & flux)
 {
   numerical_flux_type = flux;
@@ -330,15 +319,15 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::set_numerical_flux(
 // after every stage)
 // Should work as a void, even thoug Felotti implemented it returning
 // current_solution
-// template<int dim, int degree, int n_points_1d>
-// void EulerianSprayOperator<dim, degree, n_points_1d>::apply_TVB_limiter(
+// template<int dim, int degree, int n_q_points_1d>
+// void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_TVB_limiter(
 //   SolutionType & current_solution) const
 // {
 //   const unsigned int n_components = dim + 1;
 //   // Here I define new mapping and fesystem objects: should work as well
 //   MappingQ1<dim> mapping;
 //   FESystem<dim> fe(FE_DGQ<dim>(degree),dim+1);
-//   QGauss<dim> quadrature_rule(n_points_1d); //here Felotti uses fe.degree + 1
+//   QGauss<dim> quadrature_rule(n_q_points_1d); //here Felotti uses fe.degree + 1
 
 //   FEValues<dim> fe_values_grad(mapping,, qrule, update_gradients |
 //     update_JxW_values);
@@ -477,15 +466,15 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::set_numerical_flux(
 // }
 
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::
   local_apply_inverse_mass_matrix(
     const MatrixFree<dim, Number> & data,
     SolutionType & dst,
     const SolutionType & src,
     const std::pair<unsigned int, unsigned int> & cell_range) const
 {
-  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number>
+  FEEvaluation<dim, degree, n_q_points_1d, dim + 1, Number>
     phi(data, 0, 1);
   MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
     inverse(phi);
@@ -501,15 +490,15 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::
   }
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_cell(
         const MatrixFree<dim, Number> & data,
         SolutionType & dst,
         const SolutionType &src,
         const std::pair<unsigned int, unsigned int> & cell_range) const{
   // This is a class that provides all functions necessary to evaluate functions
   // at quadrature points and cell integrations. 
-  FEEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data);
+  FEEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi(data);
 
   // I comment this passage since for the moment I do not have body force, but I
   // report it here since I may implement it.
@@ -546,15 +535,15 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_cell(
 // This function performs the integration over the element's faces. The only
 // modification w.r.t. the tutorial 67 is the fact that here I am using a
 // different numerical flux, defined in InlinedFunctions.h
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_face(
   const MatrixFree<dim, Number> & data,
   SolutionType & dst,
   const SolutionType & src,
   const std::pair<unsigned int, unsigned int> & face_range) const
 {
-  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_m(data, true);
-  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi_p(data,
+  FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi_m(data, true);
+  FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi_p(data,
     false);
   
   for(unsigned int face = face_range.first; face < face_range.second; ++face)
@@ -579,14 +568,14 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_face(
   }
 }
 
-template<int dim, int degree, int n_points_1d>
-void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_boundary_face(
   const MatrixFree<dim, Number> &,
   SolutionType & dst,
   const SolutionType & src,
   const std::pair<unsigned int, unsigned int> & face_range) const
 {
-  FEFaceEvaluation<dim, degree, n_points_1d, dim + 1, Number> phi(data, true);
+  FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi(data, true);
 
   for( unsigned int face = face_range.first; face < face_range.second; ++face)
   {
@@ -627,8 +616,8 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
   }
 }
 
-// template<int dim, int degree, int n_points_1d>
-// void EulerianSprayOperator<dim, degree, n_points_1d>::compute_shock_indicator(
+// template<int dim, int degree, int n_q_points_1d>
+// void EulerianSprayOperator<dim, degree, n_q_points_1d>::compute_shock_indicator(
 //   const SolutionType & current_solution)
 // {
 //   // TODO: maybe it is better to create the struct like in tutorial 30 or 33 I 
@@ -639,7 +628,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
 //   FESystem<dim> fe(FE_DGQ<dim>(degree),dim+1);
 
 //   // TODO: why dim-1?
-//   QGauss<dim-1> quadrature(n_points_1d);//here Felotti puts fe.degree + 1
+//   QGauss<dim-1> quadrature(n_q_points_1d);//here Felotti puts fe.degree + 1
 //   FEFaceValues<dim> fe_face_values (mapping, fe, quadrature,
 //     update_values | update_normal_vectors);
 //   FEFaceValues<dim> fe_face_values_nbr (mapping, fe, quadrature,
@@ -650,7 +639,7 @@ void EulerianSprayOperator<dim, degree, n_points_1d>::local_apply_boundary_face(
 //   FESubfaceValues<dim> fe_subface_values_nbr (mapping, fe, quadrature,
 //     update_values);
 
-//   std::vector<double> face_values(n_points_1d), face_values_nbr(n_q_points);
+//   std::vector<double> face_values(n_q_points_1d), face_values_nbr(n_q_points);
 
 //   const FEValuesExtractors::Scalar variable(component);
 

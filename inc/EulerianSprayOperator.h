@@ -17,11 +17,13 @@ using namespace dealii;
 // operator is non-linear and does not require
 // a matrix interface to be used by a preconditioner, we implement an 'apply'
 // function (...)
-template<int dim, int degree, int n_points_1d>
+template<int dim, int degree, int n_q_points_1d>
 class EulerianSprayOperator{
   public:
-    static constexpr unsigned int n_quadrature_points_1d = n_points_1d;
-     // TODO: capire meglio a che serve timer_output
+    //static constexpr unsigned int n_quadrature_points_1d = n_q_points_1d;
+    // TODO: capire meglio a che serve timer_output
+    
+    // Constructor
     EulerianSprayOperator(TimerOutput & timer_output, const DoFHandler<dim> &);
 
     void reinit(const Mapping<dim> & mapping,
@@ -47,7 +49,7 @@ class EulerianSprayOperator{
     void project(const Function<dim> & function,
       SolutionType &solution) const;
     
-    std::array<double, 3> compute_errors(const Function<dim> & function,
+    std::array<double, 2> compute_errors(const Function<dim> & function,
       const SolutionType & solution) const;
 
 
@@ -57,7 +59,7 @@ class EulerianSprayOperator{
 
     void set_numerical_flux(const NumericalFlux &);
 
-    void apply_TVB_limiter(SolutionType & solution) const;
+    // void apply_TVB_limiter(SolutionType & solution) const;
 
     // void apply_WENO_limiter(SolutionType & solution) const;
 
@@ -76,17 +78,17 @@ class EulerianSprayOperator{
     //      evaluated on the unit cell.
     MatrixFree<dim, Number> data;
 
+    TimerOutput & timer;
+
     // This const reference is necessary for limiters, even though breaks the 
     // incapsulation of the EulerianSprayOperator class inside
     // EulerianSprayProblem
     const DoFHandler<dim> & dof_handler;
 
-    Vector<double> shock_indicator;
-    Vector<double> jump_indicator;
+    // Vector<double> shock_indicator;
+    // Vector<double> jump_indicator;
 
     NumericalFlux numerical_flux_type;
-
-    TimerOutput & timer;
 
     std::map<types::boundary_id, std::unique_ptr<Function<dim>>>
       dirichlet_boundaries;

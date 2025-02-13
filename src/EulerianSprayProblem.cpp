@@ -40,16 +40,25 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
   {
     case 1:{
       // Note the fact that last argument is true, therefore we get different
-      // boundary_id for the four boundaries
+      // boundary_id for the four boundaries (process called "colorization")
+      //
+      // I link the number of elements in y direction to the ones in x, assuring
+      // that the cells are squared, since I may have problems in determining
+      // the time step (even though I am rewiewing the function that computes
+      // the speed)
       GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {parameters.n_el_x_direction,5},
+        {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
         Point<dim>(-1,0),
-        Point<dim>(1,0.1),
+        Point<dim>(1,0.5),
         true);
 
       // TODO: put an if if I am using parallel::distributed::triangulation
+      
       // These three lines make a periodicity constraint on top and bottom
-      // boundaries
+      // boundaries. Periodicity constraint works marking the periodic faces
+      // as they where interior faces neighboring to the ones at the opposite
+      // boundary, and as so will be treated in the apply functions of 
+      // EulerianSprayOperator
       std::vector<GridTools::PeriodicFacePair<
         typename Triangulation<dim>::cell_iterator>> periodicity_vector;
       GridTools::collect_periodic_faces(triangulation,
@@ -68,9 +77,9 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
     case 2:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {parameters.n_el_x_direction,5},
+        {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
         Point<dim>(-1,0),
-        Point<dim>(1,0.1),
+        Point<dim>(1,0.5),
         true);
       std::vector<GridTools::PeriodicFacePair<
         typename Triangulation<dim>::cell_iterator>> periodicity_vector;
@@ -124,19 +133,19 @@ template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::output_results(
   const unsigned int result_number)
 {
-  // if(parameters.testcase==1)
-  // {
-  // const std::array<double, 3> errors =
-  //     eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
-  //       solution);
-  //   const std::string quantity_name = "error";
+  if(parameters.testcase==1)
+  {
+  const std::array<double, 2> errors =
+      eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
+        solution);
+    const std::string quantity_name = "error";
 
-  // pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
-  //       << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
-  //       << ", " << quantity_name << " rho: " << std::setprecision(4)
-  //       << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
-  //       << std::setw(10) << errors[1] << std::endl;
-  // }
+  pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
+        << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
+        << ", " << quantity_name << " rho: " << std::setprecision(4)
+        << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
+        << std::setw(10) << errors[1] << std::endl;
+  }
 
   {
     TimerOutput::Scope t(timer, "output");
@@ -204,7 +213,6 @@ void EulerianSprayProblem<dim, degree>::run()
 
   make_grid_and_dofs();
 
-  // const SSPRungeKuttaIntegrator integrator(parameters.scheme);
   std::unique_ptr<RungeKuttaIntegrator<SolutionType, 
     EulerianSprayOperator<dim,degree,n_q_points_1d>>>
       integrator;
@@ -218,11 +226,7 @@ void EulerianSprayProblem<dim, degree>::run()
     integrator =
       std::make_unique<LSRungeKuttaIntegrator
         <SolutionType,
-          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme);
-
-
-
-  
+          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme); 
 
   SolutionType rk_register1;
   SolutionType rk_register2;
@@ -238,7 +242,7 @@ void EulerianSprayProblem<dim, degree>::run()
   //This small chunk aims at finding h, the smallest distance between two nodes
   double min_vertex_distance = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
-  // in x direction
+  // in x direction even though for now I have made them squared
   if(parameters.testcase==1 || parameters.testcase==2)
   {
     for(const auto & cell : triangulation.active_cell_iterators())

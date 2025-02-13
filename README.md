@@ -33,3 +33,7 @@ mkdir results
 ./main ../input/INPUTFILENAME.prm
 
 where INPUTFILENAME.prm is the desired input file
+
+To debug:
+
+cmake .. -DCMAKE_BUILD_TYPE=Debug

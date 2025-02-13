@@ -103,6 +103,8 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     std::string selected_flux = prm.get("numerical flux type");
     if(selected_flux == "local_lax_friedrichs")
       numerical_flux_type = local_lax_friedrichs;
+    else if(selected_flux == "godunov")
+      numerical_flux_type = godunov;
   }
   prm.leave_subsection();
 }

@@ -8,8 +8,6 @@
 struct Parameters
 {
   unsigned int testcase;
-  // unsigned int fe_degree;
-  // unsigned int n_q_points_1d;
   unsigned int n_el_x_direction;
   double final_time;
   double snapshot;
