@@ -24,9 +24,9 @@ double InitialSolution<dim>::value(const Point<dim> & p,
     case 2:
     {
       if(component==0)
-        return (p[0]<0.)*1 + (p[0]>=0.)*0.5;
+        return (p[0]<0.)*1 + (p[0]>=0.)*0.25;
       if(component==1)
-        return (p[0]<0.)*1*0.25 + (p[0]>=0.)*0.5*(-0.4);
+        return (p[0]<0.)*1*0.5 + (p[0]>=0.)*0.25*(-0.4);
       return 0.;
     }
     case 3:
