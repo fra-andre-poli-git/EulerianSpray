@@ -1,7 +1,7 @@
 # EulerianSpray
 This is the repository of my APSC/PACS project on Eulerian Sprays.
 
-The license is the same as that of the library, as evinced in deal.ii README:
+The license is the same as that of the library, as evinced in deal.II README:
 
 https://www.dealii.org/9.5.0/readme.html#license
 
@@ -13,6 +13,11 @@ But then CMakeLists.txt was modified to work also (and preferentially) with the
 installation of deal.ii in the mk modules:
 
 https://github.com/pcafrica/mk
+
+The structure of the classes is taken from tutorial 67 of deal.II library, which
+solves Euler equations. The commented code is found at:
+
+https://www.dealii.org/current/doxygen/deal.II/step_67.html
 
 Most of the parameters are set at run time via input file, that can be found in
 ./input directory. The physical dimension of the problem is set at compile time,
