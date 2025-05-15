@@ -19,7 +19,8 @@
 
 
 template<int dim, int degree>
-EulerianSprayProblem<dim, degree>::EulerianSprayProblem(const Parameters & params):
+EulerianSprayProblem<dim, degree>::EulerianSprayProblem(
+  const Parameters & params):
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
     parameters(params),    
     fe(FE_DGQ<dim>(degree),dim+1),
@@ -33,9 +34,6 @@ EulerianSprayProblem<dim, degree>::EulerianSprayProblem(const Parameters & param
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
-  // In step 67 this is a global variable. I may opt for a solution like 
-  // Felotti's one, which uses a parameter memeber and make it
-  // parameters.testcase
   switch(parameters.testcase)
   {
     case 1:{
@@ -129,11 +127,14 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
             << std::endl;
 }
 
+// This is the function that writes the solution in a .vtk file
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::output_results(
-  const unsigned int result_number)
+  const unsigned int result_number,
+  bool final_time)
 {
-  if(parameters.testcase==1)
+  // In testcase 1 I have the exact solution at final time
+  if(parameters.testcase==1 && final_time)
   {
   const std::array<double, 2> errors =
       eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
@@ -141,55 +142,66 @@ void EulerianSprayProblem<dim, degree>::output_results(
     const std::string quantity_name = "error";
 
   pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
-        << ", dt: " << std::setw(8) << std::setprecision(2) << time_step
         << ", " << quantity_name << " rho: " << std::setprecision(4)
         << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
         << std::setw(10) << errors[1] << std::endl;
   }
 
+
+  TimerOutput::Scope t(timer, "output");
+
+  Postprocessor postprocessor;
+  DataOut<dim> data_out;
+
+  DataOutBase::VtkFlags flags;
+  flags.write_higher_order_cells = true; // TODO: a che serve?
+  data_out.set_flags(flags);
+
+  data_out.attach_dof_handler(dof_handler);
+  std::vector<std::string> names;
+  names.emplace_back("density");
+  for(unsigned int d = 0; d<dim; ++d)
+    names.emplace_back("momentum");
+  
+  std::vector<DataComponentInterpretation::DataComponentInterpretation>
+    interpretation;
+  interpretation.push_back(
+    DataComponentInterpretation::component_is_scalar);
+  for(unsigned int d = 0; d < dim; ++d)
+    interpretation.push_back(
+      DataComponentInterpretation::component_is_part_of_vector);
+
+  data_out.add_data_vector(dof_handler, solution, names, interpretation);
+
+  data_out.add_data_vector(solution, postprocessor);
+
+  // Here I insert the exact solution
+  if(parameters.testcase==1 && final_time)
   {
-    TimerOutput::Scope t(timer, "output");
+    SolutionType ExactFinalSolution;
+    ExactFinalSolution.reinit(solution);
+    eulerian_spray_operator.project(FinalSolution<dim>)
+  }
 
-    Postprocessor postprocessor;
-    DataOut<dim> data_out;
+  Vector<double> mpi_owner(triangulation.n_active_cells());
+  mpi_owner = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
+  data_out.add_data_vector(mpi_owner, "owner");
 
-    DataOutBase::VtkFlags flags;
-    flags.write_higher_order_cells = true; // TODO: a che serve?
-    data_out.set_flags(flags);
-
-    data_out.attach_dof_handler(dof_handler);
-    {
-      std::vector<std::string> names;
-      names.emplace_back("density");
-      for(unsigned int d = 0; d<dim; ++d)
-        names.emplace_back("momentum");
-      
-      std::vector<DataComponentInterpretation::DataComponentInterpretation>
-        interpretation;
-      interpretation.push_back(
-        DataComponentInterpretation::component_is_scalar);
-      for(unsigned int d = 0; d < dim; ++d)
-        interpretation.push_back(
-          DataComponentInterpretation::component_is_part_of_vector);
-
-      data_out.add_data_vector(dof_handler, solution, names, interpretation);
-    }
-
-    data_out.add_data_vector(solution, postprocessor);
-
-
-    Vector<double> mpi_owner(triangulation.n_active_cells());
-    mpi_owner = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
-    data_out.add_data_vector(mpi_owner, "owner");
-
-    data_out.build_patches(mapping,
-      fe.degree,
-      DataOut<dim>::curved_inner_cells);
-
+  data_out.build_patches(mapping,
+    fe.degree,
+    DataOut<dim>::curved_inner_cells);
+  
+  if(final_time)
+  {
+    const std::string filename = 
+      "./results/final_solution.vtu";
+    data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
+  }
+  else
+  {
     const std::string filename = 
       "./results/solution_" +
         Utilities::int_to_string(result_number, 3) + ".vtu";
-
     data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
   }
 }
@@ -294,13 +306,14 @@ void EulerianSprayProblem<dim, degree>::run()
     //         time >= final_time - 1e-12)
     //   output_results(
     //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
-    output_results(timestep_number);
+    output_results(timestep_number, false);
     time_step = CFL/
       Utilities::truncate_to_n_digits(
         eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
     pcout<<"New time step: "<<time_step<<std::endl;
     time += time_step; 
   }
+  output_results(timestep_number, true);
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;
 }

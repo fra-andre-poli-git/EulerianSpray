@@ -28,7 +28,7 @@ class EulerianSprayProblem{
     // This is the function that makes grid and dofs
     void make_grid_and_dofs();
 
-    void output_results(const unsigned int result_number);
+    void output_results(const unsigned int result_number, bool final_time);
 
     SolutionType solution;
 
@@ -52,7 +52,7 @@ class EulerianSprayProblem{
 
     double final_time;
 
-    static constexpr int n_q_points_1d = degree +2;
+    static constexpr int n_q_points_1d = degree + 2;
     EulerianSprayOperator<dim,degree,n_q_points_1d> eulerian_spray_operator;
     
     class Postprocessor : public DataPostprocessor<dim>{
