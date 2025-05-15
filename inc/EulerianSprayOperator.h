@@ -20,7 +20,7 @@ using namespace dealii;
 template<int dim, int degree, int n_q_points_1d>
 class EulerianSprayOperator{
   public:
-    //static constexpr unsigned int n_quadrature_points_1d = n_q_points_1d;
+    // static constexpr unsigned int n_quadrature_points_1d = n_q_points_1d;
     // TODO: capire meglio a che serve timer_output
     
     // Constructor

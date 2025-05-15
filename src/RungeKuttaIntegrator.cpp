@@ -72,25 +72,25 @@ void LSRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
   AssertDimension(ai.size() + 1, bi.size());
 
   pde_operator.perform_lsrk_stage(current_time,
-                              bi[0] * time_step,
-                              ai[0] * time_step,
-                              solution,
-                              vec_ri,
-                              solution,
-                              vec_ri);
+    bi[0] * time_step,
+    ai[0] * time_step,
+    solution,
+    vec_ri,
+    solution,
+    vec_ri);
 
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
       pde_operator.perform_lsrk_stage(current_time + c_i * time_step,
-                                  bi[stage] * time_step,
-                                  (stage == bi.size() - 1 ?
-                                    0 :
-                                    ai[stage] * time_step),
-                                  vec_ri,
-                                  vec_ki,
-                                  solution,
-                                  vec_ri);
+        bi[stage] * time_step,
+        (stage == bi.size() - 1 ?
+          0 :
+          ai[stage] * time_step),
+        vec_ri,
+        vec_ki,
+        solution,
+        vec_ri);
     }
 }
 
@@ -149,11 +149,11 @@ SSPRungeKuttaIntegrator<VectorType,Operator>::SSPRungeKuttaIntegrator(
 template <typename VectorType, typename Operator>
 void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
   const Operator &pde_operator,
-  const double    current_time,
-  const double    time_step,
-  VectorType &    solution,
-  VectorType &    copy_solution,
-  VectorType &    vec_ki) const
+  const double current_time,
+  const double time_step,
+  VectorType & solution,
+  VectorType & copy_solution,
+  VectorType & vec_ki) const
 {
   copy_solution.reinit(solution);
   copy_solution=solution;
@@ -166,7 +166,8 @@ void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
     solution *= factor[stage];
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
-    //filter solution
+    // Flux limiter
+    // pde_operator.apply_limiter();
   }
   
 }

@@ -70,9 +70,6 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   const auto velocity_minus = eulerian_spray_velocity<dim>(w_minus);
   const auto velocity_plus = eulerian_spray_velocity<dim>(w_plus);
 
-
-
-
   const auto flux_minus = eulerian_spray_flux<dim>(w_minus);
   const auto flux_plus = eulerian_spray_flux<dim>(w_plus);
 
@@ -86,7 +83,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
       // const auto delta = std::max(std::abs(v_p_times_n) ,
       //   std::abs(v_m_times_n));
 
-      // This is according to Sabat et al.
+      // This is according to Sabat et al. TODO: I can't find it on Sabat et al, find it
       const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
         0.5 * delta * (w_minus - w_plus);
@@ -101,9 +98,9 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
       const Number u_delta = ((rho_m_sqrt * (velocity_minus * normal) +
         rho_p_sqrt * (velocity_plus * normal))/(rho_m_sqrt + rho_p_sqrt));
 
-      // Now you may think, like me, that u_delta is a Number, therefore a
-      // double. Well, YOU ARE WRONG, because, thanks to the macro 
-      // DEAL_II_ALWAYS_INLINE it is a dealii::VectorizedArray<double, 2>
+      // Now, one may think, like me, that u_delta is a Number, therefore a
+      // double. Well, THEY ARE WRONG, because, thanks to the macro 
+      // DEAL_II_ALWAYS_INLINE, it is a dealii::VectorizedArray<double, 2>
       // Vectorization should speed up the performance, so I will keep it,
       // therefore now I have to deal with it
 
@@ -113,7 +110,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
 
       for(unsigned int v=0; v<vectorization_dimension; ++v)
       {
-        if(u_delta[v]>1e-12)
+        if(u_delta[v]>1e-16)
         {//flux_minus*normal
           auto normal_flux = flux_minus*normal;
           for(unsigned int d=0; d<dim+1; ++d)
@@ -121,7 +118,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
             flux[d][v]=normal_flux[d][v];
           }
         }
-        else if(-u_delta[v]>1e-12)
+        else if(-u_delta[v]>1e-16)
         {//flux_plus*normal
           auto normal_flux = flux_plus*normal;
           for(unsigned int d=0; d<dim+1; ++d)
@@ -147,9 +144,5 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
     }
   }
 }
-
-
-
-
 
 #endif

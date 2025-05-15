@@ -157,31 +157,33 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::perform_lsrk_stage(
       next_ri,
       vec_ki,
       std::function<void(const unsigned int, const unsigned int)>(),
-      [&](const unsigned int start_range, const unsigned int end_range) {
+      [&](const unsigned int start_range, const unsigned int end_range)
+      {
         const Number ai = factor_ai;
         const Number bi = factor_solution;
         if (ai == Number())
+        {
+          /* DEAL_II_OPENMP_SIMD_PRAGMA */
+          for (unsigned int i = start_range; i < end_range; ++i)
           {
-            /* DEAL_II_OPENMP_SIMD_PRAGMA */
-            for (unsigned int i = start_range; i < end_range; ++i)
-              {
-                const Number k_i          = next_ri.local_element(i);
-                const Number sol_i        = solution.local_element(i);
-                solution.local_element(i) = sol_i + bi * k_i;
-              }
+            const Number k_i          = next_ri.local_element(i);
+            const Number sol_i        = solution.local_element(i);
+            solution.local_element(i) = sol_i + bi * k_i;
           }
+        }
         else
+        {
+          /* DEAL_II_OPENMP_SIMD_PRAGMA */
+          for (unsigned int i = start_range; i < end_range; ++i)
           {
-            /* DEAL_II_OPENMP_SIMD_PRAGMA */
-            for (unsigned int i = start_range; i < end_range; ++i)
-              {
-                const Number k_i          = next_ri.local_element(i);
-                const Number sol_i        = solution.local_element(i);
-                solution.local_element(i) = sol_i + bi * k_i;
-                next_ri.local_element(i)  = sol_i + ai * k_i;
-              }
+            const Number k_i          = next_ri.local_element(i);
+            const Number sol_i        = solution.local_element(i);
+            solution.local_element(i) = sol_i + bi * k_i;
+            next_ri.local_element(i)  = sol_i + ai * k_i;
           }
-      });
+        }
+      }
+    );
   }
 }
 

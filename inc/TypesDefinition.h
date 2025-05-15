@@ -15,8 +15,7 @@ using SolutionType = LinearAlgebra::distributed::Vector<Number>;
 // instance in line 121 of EulerianSprayOperator.cpp
 // TODO: make the code work for both Vector and distributed::Vector
 
-// I define this enumerator even thoug it has only one element since I may
-// decide to implement other types of numerical flux
+
 enum NumericalFlux
 {
   local_lax_friedrichs,
