@@ -80,6 +80,37 @@ double FinalSolution<dim>::value(const Point<dim> & p,
 }
 
 template<int dim>
+double FinalSolutionVelocity<dim>::value(const Point<dim> & p,
+  const unsigned int component) const
+{
+  switch(parameters.testcase)
+  {
+    case 1:
+    {
+      if(component == 0)
+        return 0.5*(p[0]< -0.75) + 0*(p[0]>= -0.75)*(p[0]< -0.3) 
+          + 0.5 * (p[0]>= -0.3 )*(p[0]<0.2) + 1 * (p[0]>=0.2) * (p[0]<0.6)
+          + 0.5 * (p[0]>= 0.6 );
+      if(component == 1)
+        return -0.5 * (p[0]<-0.5) + 0.4*(p[0]>=-0.5)*(p[0]<0.2) + (0.8-2*p[0]) * 
+          (p[0]>=0.2)*(p[0]<0.6) - 0.4 * (p[0]>= 0.6);
+      return 0.;
+    }
+    case 2:
+    {
+      return 0.;
+    }
+    case 3:
+    {
+      return 0.;
+    }
+    default:
+      Assert(false, ExcNotImplemented());
+    return 0.;
+  }
+}
+
+template<int dim>
 double DirichletFunction<dim>::value(const Point<dim> & p,
   const unsigned int component) const
 {
@@ -149,6 +180,8 @@ double DirichletFunction<dim>::value(const Point<dim> & p,
 template class InitialSolution<2>;
 
 template class FinalSolution<2>;
+
+template class FinalSolutionVelocity<2>;
 
 template class DirichletFunction<2>;
 

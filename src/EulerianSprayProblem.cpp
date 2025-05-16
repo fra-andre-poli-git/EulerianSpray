@@ -136,17 +136,16 @@ void EulerianSprayProblem<dim, degree>::output_results(
   // In testcase 1 I have the exact solution at final time
   if(parameters.testcase==1 && final_time)
   {
-  const std::array<double, 2> errors =
+    const std::array<double, 2> errors =
       eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
         solution);
     const std::string quantity_name = "error";
 
-  pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
-        << ", " << quantity_name << " rho: " << std::setprecision(4)
-        << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
-        << std::setw(10) << errors[1] << std::endl;
+    pcout << "Time:" << std::setw(8) << std::setprecision(3) << time
+      << ", " << quantity_name << " rho: " << std::setprecision(4)
+      << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
+      << std::setw(10) << errors[1] << std::endl;
   }
-
 
   TimerOutput::Scope t(timer, "output");
 
@@ -154,7 +153,11 @@ void EulerianSprayProblem<dim, degree>::output_results(
   DataOut<dim> data_out;
 
   DataOutBase::VtkFlags flags;
-  flags.write_higher_order_cells = true; // TODO: a che serve?
+
+  // Flag determining whether to write patches as linear cells or as a
+  // high-order Lagrange cell.
+  if(degree>1)
+    flags.write_higher_order_cells = true;
   data_out.set_flags(flags);
 
   data_out.attach_dof_handler(dof_handler);
@@ -173,15 +176,31 @@ void EulerianSprayProblem<dim, degree>::output_results(
 
   data_out.add_data_vector(dof_handler, solution, names, interpretation);
 
-  data_out.add_data_vector(solution, postprocessor);
 
   // Here I insert the exact solution
   if(parameters.testcase==1 && final_time)
   {
     SolutionType ExactFinalSolution;
     ExactFinalSolution.reinit(solution);
-    eulerian_spray_operator.project(FinalSolution<dim>)
+    eulerian_spray_operator.project(FinalSolutionVelocity<dim>(parameters),
+      ExactFinalSolution);
+
+    std::vector<std::string> names;
+    names.emplace_back("Exact_density");
+    for(unsigned int d = 0; d<dim; ++d)
+      names.emplace_back("Exact_velocity");
+
+    std::vector<DataComponentInterpretation::DataComponentInterpretation>
+      interpretation;
+    interpretation.push_back(DataComponentInterpretation::component_is_scalar);
+    for(unsigned int d = 0; d < dim; ++d)
+      interpretation.push_back(
+        DataComponentInterpretation::component_is_part_of_vector);
+
+    data_out.add_data_vector(dof_handler, ExactFinalSolution, names,
+      interpretation);
   }
+  data_out.add_data_vector(solution, postprocessor);
 
   Vector<double> mpi_owner(triangulation.n_active_cells());
   mpi_owner = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
@@ -245,13 +264,11 @@ void EulerianSprayProblem<dim, degree>::run()
   rk_register1.reinit(solution);
   rk_register2.reinit(solution);
 
-  // Here I should initialize the solution
-  // Step 67 does this projecting the exact solution onto the solution vector
-  // but I don't have an exact solution for every time step, therefore I use the
-  // initial solution
+  // Here I initialize the solution with the initial data
   eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
 
-  //This small chunk aims at finding h, the smallest distance between two nodes
+  // This small chunk aims at finding h, the smallest distance between two
+  // vertices
   double min_vertex_distance = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction even though for now I have made them squared
@@ -283,7 +300,7 @@ void EulerianSprayProblem<dim, degree>::run()
     << std::endl
     << std::endl;
 
-    output_results(0);
+    output_results(0, false);
   // This is the time loop
   time = 0;
   unsigned int timestep_number = 0;

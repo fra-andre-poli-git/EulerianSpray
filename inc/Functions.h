@@ -31,6 +31,23 @@ class FinalSolution : public Function<dim>
     Parameters parameters;
 };
 
+// I create this FinalSolutionVelocity that expresses the solution in term of
+// the velocity, which is useful for the plot since it's impossible to retrieve
+// the velocity when the density is null (or it may be error prone when it's
+// small).
+template<int dim>
+class FinalSolutionVelocity : public Function<dim>
+{
+  public:
+    FinalSolutionVelocity (const Parameters & params): Function<dim>(dim + 1),
+      parameters(params){};
+    virtual double value(const Point<dim> & p, const unsigned int component)
+      const override;
+  private:
+    Parameters parameters;
+};
+
+
 template<int dim>
 class DirichletFunction : public Function<dim>
 {

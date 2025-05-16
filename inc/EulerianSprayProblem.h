@@ -70,7 +70,6 @@ class EulerianSprayProblem{
           get_data_component_interpretation() const override;
 
         virtual UpdateFlags get_needed_update_flags() const override;
-
     };
 };
 
