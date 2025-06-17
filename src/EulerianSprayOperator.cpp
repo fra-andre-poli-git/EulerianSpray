@@ -8,8 +8,7 @@
 
 template <int dim, int degree, int n_q_points_1d>
 EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
-  TimerOutput & timer, const DoFHandler<dim> & dofhandler): timer(timer),
-  dof_handler(dofhandler){}
+  TimerOutput & timer): timer(timer){}
 
 // For the initialization of the Euler operator, we set up the MatrixFree
 // variable contained in the class. This can be done given a mapping to
@@ -315,157 +314,65 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
   numerical_flux_type = flux;
 }
 
+// This function applies the limiter given by Zhang
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter(
+  SolutionType & solution,
+  const DoFHandler<dim> & dof_handler,
+  const MappingQ1<dim> & mapping,
+  const FESystem<dim> & fe) const
+{
+  TimerOutput::Scope t(timer, "Apply positivity limiter");
+
+  // First part: Set up a small number
+
+  // I define a small quantity epsilon
+  Number eps = 1.0e-13;
+  // I create a vector to store the vectors of values of cell averages of density
+  std::vector<Number> cell_density_averages;
+
+  QGauss<dim>   quadrature_formula(degree+1);
+  const unsigned int n_q_points = quadrature_formula.size();
+
+  FEValues<dim> fe_values (mapping, fe,
+                           quadrature_formula,
+                           update_values | update_JxW_values);
+  std::vector<Vector<double> > solution_values(n_q_points,
+                                               Vector<double>(dim+2));
 
 
-// This is the function that applies TVB limiter to the solution (it is called
-// after every stage)
-// Should work as a void, even thoug Felotti implemented it returning
-// current_solution
-// template<int dim, int degree, int n_q_points_1d>
-// void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_TVB_limiter(
-//   SolutionType & current_solution) const
-// {
-//   const unsigned int n_components = dim + 1;
-//   // Here I define new mapping and fesystem objects: should work as well
-//   MappingQ1<dim> mapping;
-//   FESystem<dim> fe(FE_DGQ<dim>(degree),dim+1);
-//   QGauss<dim> quadrature_rule(n_q_points_1d); //here Felotti uses fe.degree + 1
+  // In this loop I compute the average value of the density
+  // TODO I could vectorize it using FEEvaluation instead of FEValues
+  typename DoFHandler<dim>::active_cell_iterator
+    cell = dof_handler.begin_active(),
+    endc = dof_handler.end();
+  for(; cell!=endc; ++cell)
+  {
+    // I store the averages that will be useful in second part
+    unsigned int cell_no = cell->user_index();
+    fe_values.reinit (cell);
+    fe_values.get_function_values (solution, solution_values);
 
-//   FEValues<dim> fe_values_grad(mapping,, qrule, update_gradients |
-//     update_JxW_values);
+    cell_density_averages[cell_no] = 0.0;
 
-//   Quadrature<dim> qsupport(fe.get_unit_support_points());
-//   FEValues<dim> fe_values(mapping, fe, qsupport, update_quadrature_points);
+    for (unsigned int q=0; q<n_q_points; ++q)
+      cell_density_averages[cell_no] += solution_values[q][0] * fe_values.JxW(q);
 
-//   // TODO maybe a vector of Vectors could be used to generalize for the dimension
-//   Vector<double> dfx (n_components);
-//   Vector<double> dbx (n_components);
-//   Vector<double> Dx (n_components);
-//   Vector<double> Dx_new (n_components);
-
-//   Vector<double> dfy (n_components);
-//   Vector<double> dby (n_components);
-//   Vector<double> Dy (n_components);
-//   Vector<double> Dy_new (n_components);
-
-//   Vector<double> avg_nbr (n_components);
-
-//   std::vector<unsigned int> dof_indices (fe.dofs_per_cell);
-//   std::vector< std::vector< Tensor<1,dim> > > grad (qrule.size(),
-//     std::vector< Tensor<1,dim> >(n_components));
-
-//   // TODO beta and M should be setted in parameters, but as for now
-//   // EulerianSprayOperator does not have a parameters member
-//   const double beta = 1;
-//   const double M = 100;
-
-//   // TODO choose at what level compute the shock indicator and implement it
-//   Vector<double> shock_indicator;
-
-//   for(auto cell = dof_handler.begin_active; cell != dof_handler.end(); ++cell)
-//   {
-//     // TODO: is there a more elegant way than obaining cell number?
-//     // If I keep this procedure I have to write cell_number() function
-//     const unsigned int c = cell_number(cell);
-//     if(shock_indicator[c] > 1.0)
-//     {
-//       // TODO: does 1.0*dim implies the fact that I am considering squared cells?
-//       // because in my code is not necessarily the same
-//       const double dx = cell->diameter() / std::sqrt(1.0*dim);
-//       const double Mdx2 = M*dx*dx;
-
-//       // Compute average gradient of conserved quantities in cell
-//       fe_values_grad.reinit(cell);
-//       fe_values_grad.get_function_gradients(current_solution, grad);
-//       Tensor<1, dim> avg_grad;
-
-//       for(unsigned int i = 0; i<n_components; ++i)
-//       {
-//         avg_grad = 0;
-//         for(unsigned int q = 0; q<qrule.size(); ++q)
-//           avg_grad += grad[q][i] * fe_values_grad.JxW(q);
-//         avg_grad /= cell->measure();
-//         Dx(i) = dx * avg_grad[0];
-//         Dy(i) = dx * avg_grad[1];
-//       }
+    cell_density_averages[cell_no] /= cell->measure();
 
 
 
-//       // TODO: implement get_cell_average and define endc0 and the vectors of
-//       // cell neighbors lcell, rcell, bcell, tcell
+  }
 
-//       // X DIRECTION
-//       // Backward difference of cell averages
-//       dbx = Dx;
-//       if(lcell[c] != endc0)
-//       {
-//         get_cell_average (lcell[c], avg_nbr);
-//         for(unsigned int i=0; i<n_components; ++i)
-//           dbx(i) = cell_average[c][i] - avg_nbr(i);
-//       }
-//       // Forward difference of cell averages
-//       dfx = Dx;
-//       if(rcell[c] != endc0)
-//       {
-//         get_cell_average (rcell[c], avg_nbr);
-//         for(unsigned int i=0; i<n_components; ++i)
-//           dfx(i) = avg_nbr(i) - cell_average[c][i];
-//       }
-
-//       // Y DIRECTION
-//       // Backward difference of cell averages
-//       dby = Dy;
-//       if(bcell[c] != endc0)
-//       {
-//         get_cell_average (bcell[c], avg_nbr);
-//         for(unsigned int i=0; i<n_components; ++i)
-//           dby(i) = cell_average[c][i] - avg_nbr(i);
-//       }
-
-//       // Forward difference of cell averages
-//       dfy = Dy;
-//       if(tcell[c] != endc0)
-//       {
-//         get_cell_average (tcell[c], avg_nbr);
-//         for(unsigned int i=0; i<n_components; ++i)
-//           dfy(i) = avg_nbr(i) - cell_average[c][i];
-//       }
+  // TODO Second part in each cell modify density
+  for(auto cell = dof_handler.begin_active(); cell != dof_handler.end(); ++cell)
+  {
+    // Find \theta
+    // Modify the solution
+  } 
+}
 
 
-//       // Apply minmod limiter
-//       // TODO: implement minmod function
-//       double change_x = 0;
-//       double change_y = 0;
-//       for(unsigned int i = 0; i<n_components; ++i)
-//       {
-//         Dx_new(i) = minmod(Dx(i), beta*dbx(i), beta*dfx(i), Mdx2);
-//         Dy_new(i) = minmod(Dy(i), beta*dby(i), beta*dfy(i), Mdx2);
-//         change_x += std::fabs(Dx_new(i) - Dx(i));
-//         change_y += std::fabs(Dy_new(i) - Dy(i));
-//       }
-//       change_x /= n_components;
-//       change_y /= n_components;
-
-//       if(change_x + change_y > 1.0-10)
-//       {
-//         Dx_new /= dx;
-//         Dy_new /= dx;
-
-//         cell->get_dof_indices(dof_indices);
-//         fe_values.reinit(cell);
-//         const std::vector<Point<dim>> & p = fe_values.get_quadrature_points();
-//         for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
-//         {
-//           unsigned int comp_i = fe.system_to_component_index(i).first;
-//           Tensor<1,dim> dr = p[i] - cell->center();
-//           current_solution(dof_indices[i]) = cell_average[c][comp_i]
-//             + dr[0] * Dx_new(comp_i)
-//             + dr[1] * Dy_new(comp_i);
-//         }
-//       }
-//     }
-//   }
-// }
 
 
 template<int dim, int degree, int n_q_points_1d>
@@ -617,54 +524,6 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_boundary_fac
      phi.integrate_scatter(EvaluationFlags::values, dst);
   }
 }
-
-// template<int dim, int degree, int n_q_points_1d>
-// void EulerianSprayOperator<dim, degree, n_q_points_1d>::compute_shock_indicator(
-//   const SolutionType & current_solution)
-// {
-//   // TODO: maybe it is better to create the struct like in tutorial 30 or 33 I 
-//   // don't remember
-//   const unsigned density_component = 0;
-
-//   MappingQ1<dim> mapping;
-//   FESystem<dim> fe(FE_DGQ<dim>(degree),dim+1);
-
-//   // TODO: why dim-1?
-//   QGauss<dim-1> quadrature(n_q_points_1d);//here Felotti puts fe.degree + 1
-//   FEFaceValues<dim> fe_face_values (mapping, fe, quadrature,
-//     update_values | update_normal_vectors);
-//   FEFaceValues<dim> fe_face_values_nbr (mapping, fe, quadrature,
-//     update_values);
-//   FESubfaceValues<dim> fe_subface_values (mapping, fe, quadrature,
-//     update_values |
-//     update_normal_vectors);
-//   FESubfaceValues<dim> fe_subface_values_nbr (mapping, fe, quadrature,
-//     update_values);
-
-//   std::vector<double> face_values(n_q_points_1d), face_values_nbr(n_q_points);
-
-//   const FEValuesExtractors::Scalar variable(component);
-
-//   double jump_ind_min = 1.0e20;
-//   double jump_ind_max = 0.0;
-//   double jump_ind_avg = 0.0;
-
-//   for(auto cell = dof_handler.begin_active(); cell != dof_handler.end(); ++cell)
-//   {
-//     unsigned int c = cell->user_index();
-//     double & cell_shock_ind = shock_indicator(c);
-//     double & cell_jump_ind = jump_indicator(c);
-
-//     cell_shock_ind = 0;
-//     cell_jump_ind = 0;
-//     double 
-//   }
-
-// }
-
-
-
-
 
 // This is the implementation of the two helper function (defined here since
 // they are only used by EulerianSprayOperator methods)

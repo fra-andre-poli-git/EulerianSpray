@@ -7,6 +7,7 @@
 #include<deal.II/base/function.h>
 #include<deal.II/base/vectorization.h>
 #include<deal.II/base/timer.h>
+#include<deal.II/fe/fe_system.h> 
 
 using namespace dealii;
 
@@ -24,7 +25,7 @@ class EulerianSprayOperator{
     // TODO: capire meglio a che serve timer_output
     
     // Constructor
-    EulerianSprayOperator(TimerOutput & timer_output, const DoFHandler<dim> &);
+    EulerianSprayOperator(TimerOutput & timer_output);
 
     void reinit(const Mapping<dim> & mapping,
       const DoFHandler<dim> & dof_handler);
@@ -59,7 +60,10 @@ class EulerianSprayOperator{
 
     void set_numerical_flux(const NumericalFlux &);
 
-    // void apply_TVB_limiter(SolutionType & solution) const;
+    void apply_positivity_limiter(SolutionType & solution,
+      const DoFHandler<dim> & dof_handler,
+      const MappingQ1<dim> & mapping,
+      const FESystem<dim> & fe) const;
 
     // void apply_WENO_limiter(SolutionType & solution) const;
 
@@ -79,11 +83,6 @@ class EulerianSprayOperator{
     MatrixFree<dim, Number> data;
 
     TimerOutput & timer;
-
-    // This const reference is necessary for limiters, even though breaks the 
-    // incapsulation of the EulerianSprayOperator class inside
-    // EulerianSprayProblem
-    const DoFHandler<dim> & dof_handler;
 
     // Vector<double> shock_indicator;
     // Vector<double> jump_indicator;

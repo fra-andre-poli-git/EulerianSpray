@@ -29,14 +29,49 @@ EulerianSprayProblem<dim, degree>::EulerianSprayProblem(
     time(0),
     time_step(0),
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
-    eulerian_spray_operator(timer,dof_handler){}
+    eulerian_spray_operator(timer){}
 
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
   switch(parameters.testcase)
   {
+    // Accuracy
     case 1:{
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+        {parameters.n_el_x_direction, parameters.n_el_x_direction /10},
+        Point<dim>(0,0),
+        Point<dim>(1,0.5),
+        true);
+
+      // TODO: put an if if I am using parallel::distributed::triangulation    
+      
+      // These three lines make a periodicity constraint on top and bottom
+      // boundaries. Periodicity constraint works marking the periodic faces
+      // as they where interior faces neighboring to the ones at the opposite
+      // boundary, and as so will be treated in the apply functions of 
+      // EulerianSprayOperator
+      std::vector<GridTools::PeriodicFacePair<
+        typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+      GridTools::collect_periodic_faces(triangulation,
+        2,
+        3,
+        1,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+      
+      periodicity_vector.clear();
+
+      GridTools::collect_periodic_faces(triangulation,
+        0,
+        1,
+        0,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+    }
+    // Vacuum
+    case 2:
+    {
       // Note the fact that last argument is true, therefore we get different
       // boundary_id for the four boundaries (process called "colorization")
       //
@@ -47,7 +82,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
         Point<dim>(-1,0),
-        Point<dim>(1,0.5),
+        Point<dim>(1,0.01),
         true);
 
       // TODO: put an if if I am using parallel::distributed::triangulation
@@ -72,7 +107,8 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    case 2:
+    // Moving delta-shock
+    case 3:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
@@ -94,7 +130,10 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    case 3:
+    // Stationary delta-shock
+    case 4:{}
+    // 2d collapse
+    case 5:
     {
       GridGenerator::subdivided_hyper_cube(triangulation,
         parameters.n_el_x_direction,
@@ -109,7 +148,12 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    case 4:
+    // 2d vacuum
+    case 6:{}
+    // 2d stationary delta-shock
+    case 7:
+    // Taylor vortices
+    case 8:
     {
       GridGenerator::hyper_cube(triangulation, 0, 1, true);
     }
@@ -133,8 +177,8 @@ void EulerianSprayProblem<dim, degree>::output_results(
   const unsigned int result_number,
   bool final_time)
 {
-  // In testcase 1 I have the exact solution at final time
-  if(parameters.testcase==1 && final_time)
+  // In testcase 2 I have the exact solution at final time
+  if(parameters.testcase==2 && final_time)
   {
     const std::array<double, 2> errors =
       eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
@@ -178,7 +222,7 @@ void EulerianSprayProblem<dim, degree>::output_results(
 
 
   // Here I insert the exact solution
-  if(parameters.testcase==1 && final_time)
+  if(parameters.testcase==2 && final_time)
   {
     SolutionType ExactFinalSolution;
     ExactFinalSolution.reinit(solution);
@@ -272,7 +316,8 @@ void EulerianSprayProblem<dim, degree>::run()
   double min_vertex_distance = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction even though for now I have made them squared
-  if(parameters.testcase==1 || parameters.testcase==2)
+  if(parameters.testcase==1 || parameters.testcase==2 || parameters.testcase==3
+    || parameters.testcase==4)
   {
     for(const auto & cell : triangulation.active_cell_iterators())
       min_vertex_distance = 
@@ -327,6 +372,8 @@ void EulerianSprayProblem<dim, degree>::run()
     time_step = CFL/
       Utilities::truncate_to_n_digits(
         eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+    if((time + time_step) >= final_time)
+        time_step = final_time - time;
     pcout<<"New time step: "<<time_step<<std::endl;
     time += time_step; 
   }

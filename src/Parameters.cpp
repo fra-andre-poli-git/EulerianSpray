@@ -8,9 +8,9 @@ void Parameters::declare_parameters(ParameterHandler & prm)
       "1",
       Patterns::Integer(0), // Is it ok even if I want an unsigned?
       "Number of case:"
-        "- 1: vacuum formation"
-        "- 2: delta shock"
-        "- 3: 2d");
+        "- 2: vacuum formation"
+        "- 3: moving delta shock"
+        "- 4: 2d collapse");
 
     // prm.declare_entry("finite element degree",
     //   "0",
