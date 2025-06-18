@@ -314,7 +314,10 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
   numerical_flux_type = flux;
 }
 
-// This function applies the limiter given by Zhang
+// This function applies the limiter given by Zhang, Shu,
+// "On positivity-preserving high order discontinuous Galerkin schemes for 
+// compressible Euler equations on rectangular meshes", adapted to the
+// pressureless gas dynamics system of equations
 template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter(
   SolutionType & solution,
@@ -360,14 +363,24 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
     cell_density_averages[cell_no] /= cell->measure();
 
+    if{cell_density_averages[cell_no]}
+      AssertThrow(false, ExcMessage("Average density is negative in one cell"));
+
+    eps = std::min(eps, cell_density_averages[cell_no]);
 
 
   }
 
+  cell = dof_handler.begin_active();
+
   // TODO Second part in each cell modify density
-  for(auto cell = dof_handler.begin_active(); cell != dof_handler.end(); ++cell)
+  for(; cell != dof_handler.end(); ++cell)
   {
     // Find \theta
+    // - find \rho_min
+
+    // - compute \theta
+
     // Modify the solution
   } 
 }
