@@ -167,7 +167,8 @@ void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
     // Flux limiter
-    // pde_operator.apply_limiter();
+    // Here I call the limiter using a tuple for the references 
+    pde_operator.apply_positivity_limiter(solution,);
   }
   
 }

@@ -2,6 +2,7 @@
 #include"InlinedFunctions.h"
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
+#include<deal.II/fe/fe_values_extractors.h> 
 #include<deal.II/matrix_free/fe_evaluation.h>
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
@@ -19,10 +20,10 @@ EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
 // AffineConstraints object and rather use a dummy for the
 // construction. With respect to quadrature, we want to select two different
 // ways of computing the underlying integrals: The first is a flexible one,
-// based on a template parameter `n_q_points_1d` (that will be assigned the
-// `n_q_points_1d` value specified at the top of this file). More accurate
-// integration is necessary to avoid the aliasing problem due to the
-// variable coefficients in the Euler operator. The second less accurate
+// based on a template parameter `n_q_points_1d` (that will be assigned by the
+// `n_q_points_1d` value specified in the declaration of EulerianSprayProblem).
+// More accurate integration is necessary to avoid the aliasing problem due to
+// the variable coefficients in the Euler operator. The second less accurate
 // quadrature formula is a tight one based on `fe_degree+1` and needed for
 // the inverse mass matrix. While that formula provides an exact inverse
 // only on affine element shapes and not on deformed elements, it enables
@@ -335,7 +336,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   std::vector<Number> cell_density_averages;
 
   QGauss<dim>   quadrature_formula(degree+1);
-  const unsigned int n_q_points = quadrature_formula.size();
+  unsigned int n_q_points = quadrature_formula.size();
 
   FEValues<dim> fe_values (mapping, fe,
                            quadrature_formula,
@@ -363,7 +364,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
     cell_density_averages[cell_no] /= cell->measure();
 
-    if{cell_density_averages[cell_no]}
+    if(cell_density_averages[cell_no])
       AssertThrow(false, ExcMessage("Average density is negative in one cell"));
 
     eps = std::min(eps, cell_density_averages[cell_no]);
@@ -374,14 +375,57 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   cell = dof_handler.begin_active();
 
   // TODO Second part in each cell modify density
+  // TODO : this is the implementation by Felotti. Can I improve it making it
+  // not dimension specific?
+  // N is the number of points in the Gauss-Lobatto quadrature; for it to be
+  // exact for polynomials
+  unsigned int N = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  Quadrature<dim> quadrature_x (QGaussLobatto<1>(N), QGauss<1>(degree + 1)); // TODO why degree + 1 ?
+  Quadrature<dim> quadrature_y (QGauss<1>(degree + 1), QGaussLobatto<1>(N));
+  FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
+  FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
+  n_q_points = quadrature_x.size();
+  std::vector<Number> density_values(n_q_points);
+  std::vector<unsigned int> local_dof_indices(fe.dofs_per_cell);
+
+  const FEValuesExtractors::Scalar density(0);
+
+
   for(; cell != dof_handler.end(); ++cell)
   {
     // Find \theta
+    unsigned int cell_no = cell->user_index();
+    fe_values_x.reinit(cell);
+    fe_values_y.reinit(cell);
+
     // - find \rho_min
+    Number rho_min = 1.0;
+    fe_values_x[density].get_function_values(solution, density_values);
+    for(unsigned int q=0; q<n_q_points; ++q)
+       rho_min = std::min(rho_min, density_values[q]);
+    fe_values_y[density].get_function_values(solution, density_values);
+    for(unsigned int q=0; q<n_q_points; ++q)
+       rho_min = std::min(rho_min, density_values[q]);
 
     // - compute \theta
+    Number density_average = cell_density_averages[cell_no];
+    Number quotient = (density_average - eps)/(density_average - rho_min);
+    Number theta1 = std::min(quotient, 1.0);
 
     // Modify the solution
+    if(theta1 < 1.0)
+    {
+       cell->get_dof_indices (local_dof_indices);
+
+       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+       {
+          unsigned int comp_i = fe.system_to_component_index(i).first;
+          if(comp_i == 0)
+             solution(local_dof_indices[i]) =
+                theta1           * solution(local_dof_indices[i])
+                + (1.0 - theta1) * density_average;
+       }
+    }
   } 
 }
 
