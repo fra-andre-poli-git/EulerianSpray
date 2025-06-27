@@ -36,6 +36,3 @@ build/
 
 #cmake stuff
 compile_commands.json
-
-#VSCode stuff
-.vscode/
