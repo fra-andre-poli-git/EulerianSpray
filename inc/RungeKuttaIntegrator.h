@@ -1,8 +1,11 @@
 #ifndef RUNGE_KUTTA_INTEGRATOR
 #define RUNGE_KUTTA_INTEGRATOR
 #include"TypesDefinition.h"
+#include<deal.II/fe/fe_system.h> 
+#include<deal.II/fe/mapping_q1.h>
+#include<deal.II/dofs/dof_handler.h>
 
-template<typename VectorType, typename Operator>
+template<typename VectorType, typename Operator, int dim>
 class RungeKuttaIntegrator
 {
   public:
@@ -13,12 +16,15 @@ class RungeKuttaIntegrator
       const double    time_step,
       VectorType &    solution,
       VectorType &    vec_ri,
-      VectorType &    vec_ki
-    ) const = 0 ;
+      VectorType &    vec_ki,
+      // These three are needed for the limiter
+      const DoFHandler<dim> & dof_handler,
+      const MappingQ1<dim> & mapping,
+      const FESystem<dim> & fe) const = 0 ;
     virtual ~RungeKuttaIntegrator() = default;  
 };
-template<typename VectorType, typename Operator>
-class LSRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator>
+template<typename VectorType, typename Operator, int dim>
+class LSRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator,dim>
 {
   public:
     LSRungeKuttaIntegrator(const RungeKuttaScheme scheme);
@@ -30,7 +36,11 @@ class LSRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator>
       const double    time_step,
       VectorType &    solution,
       VectorType &    vec_ri,
-      VectorType &    vec_ki) const override;
+      VectorType &    vec_ki,
+      // These three are needed for the limiter
+      const DoFHandler<dim> & dof_handler,
+      const MappingQ1<dim> & mapping,
+      const FESystem<dim> & fe) const override;
 
   private:
     std::vector<double> bi;
@@ -38,8 +48,8 @@ class LSRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator>
     std::vector<double> ci;
 };
 
-template<typename VectorType, typename Operator>
-class SSPRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator>
+template<typename VectorType, typename Operator, int dim>
+class SSPRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator, dim>
 {
   public:
     SSPRungeKuttaIntegrator(const RungeKuttaScheme scheme);
@@ -49,7 +59,11 @@ class SSPRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator>
     const double time_step,
     VectorType & solution,
     VectorType & vec_ri,
-    VectorType & vec_ki) const override;
+    VectorType & vec_ki,
+    // These three are needed for the limiter
+    const DoFHandler<dim> & dof_handler,
+    const MappingQ1<dim> & mapping,
+    const FESystem<dim> & fe) const override;
 
   unsigned int n_stages() const override;
   

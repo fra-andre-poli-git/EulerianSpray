@@ -333,7 +333,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   // I define a small quantity epsilon
   Number eps = 1.0e-13;
   // I create a vector to store the vectors of values of cell averages of density
-  std::vector<Number> cell_density_averages;
+  std::vector<Number> cell_density_averages( dof_handler.get_triangulation().n_active_cells(), 0.0);
 
   QGauss<dim>   quadrature_formula(degree+1);
   unsigned int n_q_points = quadrature_formula.size();
@@ -342,7 +342,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
                            quadrature_formula,
                            update_values | update_JxW_values);
   std::vector<Vector<double> > solution_values(n_q_points,
-                                               Vector<double>(dim+2));
+                                               Vector<double>(dim+1));
 
 
   // In this loop I compute the average value of the density
@@ -355,7 +355,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
     // I store the averages that will be useful in second part
     unsigned int cell_no = cell->user_index();
     fe_values.reinit (cell);
-    fe_values.get_function_values (solution, solution_values);
+    fe_values.get_function_values(solution, solution_values);
 
     cell_density_averages[cell_no] = 0.0;
 
@@ -364,12 +364,10 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
     cell_density_averages[cell_no] /= cell->measure();
 
-    if(cell_density_averages[cell_no])
+    if(cell_density_averages[cell_no]<0.0)
       AssertThrow(false, ExcMessage("Average density is negative in one cell"));
 
     eps = std::min(eps, cell_density_averages[cell_no]);
-
-
   }
 
   cell = dof_handler.begin_active();

@@ -4,8 +4,8 @@
 #include"EulerianSprayOperator.h"
 #include<deal.II/base/time_stepping.h>
 
-template <typename VectorType, typename Operator>
-LSRungeKuttaIntegrator<VectorType,Operator>::LSRungeKuttaIntegrator(
+template <typename VectorType, typename Operator, int dim>
+LSRungeKuttaIntegrator<VectorType,Operator, dim>::LSRungeKuttaIntegrator(
   const RungeKuttaScheme scheme)
 {
   TimeStepping::runge_kutta_method lsrk;
@@ -44,9 +44,9 @@ LSRungeKuttaIntegrator<VectorType,Operator>::LSRungeKuttaIntegrator(
   rk_integrator.get_coefficients(ai, bi, ci);
 }
 
-template <typename VectorType, typename Operator>
+template <typename VectorType, typename Operator, int dim>
 unsigned int
-LSRungeKuttaIntegrator<VectorType,Operator>::n_stages() const
+LSRungeKuttaIntegrator<VectorType,Operator, dim>::n_stages() const
 {
   return bi.size();
 }
@@ -60,14 +60,18 @@ LSRungeKuttaIntegrator<VectorType,Operator>::n_stages() const
 // schemes, but can be also very expansive if the method is a low storage one,
 // since in this implementation I mantain al Ki up to the computation of the new
 // solution
-template <typename VectorType, typename Operator>
-void LSRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
+template <typename VectorType, typename Operator, int dim>
+void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const Operator &pde_operator,
   const double    current_time,
   const double    time_step,
   VectorType &    solution,
   VectorType &    vec_ri,
-  VectorType &    vec_ki) const
+  VectorType &    vec_ki,
+  // These three are needed for the limiter
+  const DoFHandler<dim> & dof_handler,
+  const MappingQ1<dim> & mapping,
+  const FESystem<dim> & fe) const
 {
   AssertDimension(ai.size() + 1, bi.size());
 
@@ -78,7 +82,7 @@ void LSRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
     vec_ri,
     solution,
     vec_ri);
-
+  pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
@@ -91,11 +95,12 @@ void LSRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
         vec_ki,
         solution,
         vec_ri);
+      pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
     }
 }
 
-template <typename VectorType, typename Operator>
-SSPRungeKuttaIntegrator<VectorType,Operator>::SSPRungeKuttaIntegrator(
+template <typename VectorType, typename Operator, int dim>
+SSPRungeKuttaIntegrator<VectorType,Operator, dim>::SSPRungeKuttaIntegrator(
   const RungeKuttaScheme scheme)
 {
   switch(scheme)
@@ -146,14 +151,18 @@ SSPRungeKuttaIntegrator<VectorType,Operator>::SSPRungeKuttaIntegrator(
 // I still use the two latter arguments, but one is to store the solution at
 // previous time step, and not vec_ri, therefore it is copy initialized from
 // solution every time step
-template <typename VectorType, typename Operator>
-void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
+template <typename VectorType, typename Operator, int dim>
+void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const Operator &pde_operator,
   const double current_time,
   const double time_step,
   VectorType & solution,
   VectorType & copy_solution,
-  VectorType & vec_ki) const
+  VectorType & vec_ki,
+  // These three are needed for the limiter
+  const DoFHandler<dim> & dof_handler,
+  const MappingQ1<dim> & mapping,
+  const FESystem<dim> & fe) const
 {
   copy_solution.reinit(solution);
   copy_solution=solution;
@@ -167,29 +176,28 @@ void SSPRungeKuttaIntegrator<VectorType,Operator>::perform_time_step(
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
     // Flux limiter
-    // Here I call the limiter using a tuple for the references 
-    pde_operator.apply_positivity_limiter(solution,);
+    pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   }
   
 }
 
-template <typename VectorType, typename Operator>
+template <typename VectorType, typename Operator, int dim>
 unsigned int
-SSPRungeKuttaIntegrator<VectorType,Operator>::n_stages() const
+SSPRungeKuttaIntegrator<VectorType,Operator, dim>::n_stages() const
 {
   return factor.size();
 }
 
 
 //Instantiations of the template function
-template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
-template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
-template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>,2>;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>,2>;
+template class RungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>,2>;
 
-template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
-template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
-template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>,2>;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>,2>;
+template class LSRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>,2>;
 
-template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>>;
-template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>>;
-template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>>;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,0,2>,2>;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,1,3>,2>;
+template class SSPRungeKuttaIntegrator<SolutionType,EulerianSprayOperator<2,2,4>,2>;

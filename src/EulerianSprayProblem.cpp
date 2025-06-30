@@ -82,7 +82,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
         Point<dim>(-1,0),
-        Point<dim>(1,0.01),
+        Point<dim>(1,0.05),
         true);
 
       // TODO: put an if if I am using parallel::distributed::triangulation
@@ -289,19 +289,19 @@ void EulerianSprayProblem<dim, degree>::run()
   make_grid_and_dofs();
 
   std::unique_ptr<RungeKuttaIntegrator<SolutionType, 
-    EulerianSprayOperator<dim,degree,n_q_points_1d>>>
+    EulerianSprayOperator<dim,degree,n_q_points_1d>, dim>>
       integrator;
   if(parameters.scheme == forward_euler || parameters.scheme==ssp_stage_2_order_2 ||
     parameters.scheme==ssp_stage_3_order_3)
     integrator =
       std::make_unique<SSPRungeKuttaIntegrator
         <SolutionType,
-          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme);
+          EulerianSprayOperator<dim,degree,n_q_points_1d>, dim>>(parameters.scheme);
   else
     integrator =
       std::make_unique<LSRungeKuttaIntegrator
         <SolutionType,
-          EulerianSprayOperator<dim,degree,n_q_points_1d>>>(parameters.scheme); 
+          EulerianSprayOperator<dim,degree,n_q_points_1d>, dim>>(parameters.scheme); 
 
   SolutionType rk_register1;
   SolutionType rk_register2;
@@ -359,7 +359,10 @@ void EulerianSprayProblem<dim, degree>::run()
         time_step,
         solution,
         rk_register1,
-        rk_register2);
+        rk_register2,
+        dof_handler,
+        mapping,
+        fe);
     }
     pcout<<"Performed time step at time: "<<time<<
       ", time step number: "<< timestep_number<<std::endl;
