@@ -77,16 +77,38 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   {
     case local_lax_friedrichs:
     {
-      // These is according to Forcella
-      // auto v_p_times_n = static_cast<Number>(velocity_plus * normal);
-      // auto v_m_times_n = static_cast<Number>(velocity_minus * normal);
-      // const auto delta = std::max(std::abs(v_p_times_n) ,
-      //   std::abs(v_m_times_n));
+      // Original
+      auto v_p_times_n = (velocity_plus * normal);
+      auto v_m_times_n = (velocity_minus * normal);
+      // TODO: why do I have to take the absolute values?
+      const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
 
       // This is according to Sabat et al. TODO: I can't find it on Sabat et al, find it
-      const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
+      // const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
+
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
         0.5 * delta * (w_minus - w_plus);
+    }
+    case local_lax_friedrichs_modified:
+    {
+      // This is the modified version from tutorial
+      const auto delta  = 0.5 * std::sqrt(std::max(velocity_plus.norm_square(),
+        velocity_minus.norm_square()));
+
+      return 0.5 * (flux_minus * normal + flux_plus * normal) +
+        0.5 * delta * (w_minus - w_plus);
+    }
+    case harten_lax_vanleer:
+    {
+      const auto avg_velocity_normal = 
+        0.5 * ((velocity_minus + velocity_plus) * normal);
+      const Number s_pos = std::max(Number(), avg_velocity_normal);
+      const Number s_neg = std::min(Number(), avg_velocity_normal);
+      const Number inverse_s = Number(1.) / (s_pos - s_neg);
+
+      return inverse_s *
+        ((s_pos * (flux_minus * normal) - s_neg * (flux_plus * normal)) -
+        s_pos * s_neg * (w_minus - w_plus));
     }
     case godunov:
     {

@@ -24,7 +24,7 @@ double InitialSolution<dim>::value(const Point<dim> & p,
       if(component==1)
         return 0.5*(-0.5*(p[0]<-0.5) + 0.4*(-0.5<=p[0] && p[0]<0) + (0.4-p[0])*
           (0<=p[0] && p[0] <0.8) + -0.4*(p[0]>=0.8));
-      // In parameters.testcase 1 the dimension is supposed to be 1. However, since output
+      // Testcase 1 the dimension is supposed to be 1. However, since output
       // functions are expected to work in dimension bigger than 1, I put this
       // return to make y momentum null.
       return 0.; 

@@ -26,7 +26,7 @@ cmake_minimum_required(VERSION 3.13.4)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
 
-# Find dealii
+# Find dealii (preference for the mk modules version)
 find_package(deal.II 9.5.1
   HINTS $ENV{mkDealiiPrefix} ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )

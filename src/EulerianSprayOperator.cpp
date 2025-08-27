@@ -7,6 +7,8 @@
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
 
+#include <algorithm>
+
 template <int dim, int degree, int n_q_points_1d>
 EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
   TimerOutput & timer): timer(timer){}
@@ -331,19 +333,22 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   // First part: Set up a small number
 
   // I define a small quantity epsilon
-  Number eps = 1.0e-13;
-  // I create a vector to store the vectors of values of cell averages of density
+  const Number eps = 1.0e-13;
+  // I create a vector to store the values of cell averages of density
   std::vector<Number> cell_density_averages( dof_handler.get_triangulation().n_active_cells(), 0.0);
 
-  QGauss<dim>   quadrature_formula(degree+1);
+  // QGauss<dim> quadrature_formula(
+  //   degree == 0 ?  1 :
+  //   (degree % 2 == 1 ? (degree + 1)/2 : (degree + 2)/2));
+  QGauss<dim>   quadrature_formula(fe.degree+1);
   unsigned int n_q_points = quadrature_formula.size();
 
-  FEValues<dim> fe_values (mapping, fe,
-                           quadrature_formula,
-                           update_values | update_JxW_values);
+  FEValues<dim> fe_values (mapping,
+    fe,
+    quadrature_formula,
+    update_values | update_JxW_values);
   std::vector<Vector<double> > solution_values(n_q_points,
-                                               Vector<double>(dim+1));
-
+    Vector<double>(dim+1));
 
   // In this loop I compute the average value of the density
   // TODO I could vectorize it using FEEvaluation instead of FEValues
@@ -353,7 +358,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   for(; cell!=endc; ++cell)
   {
     // I store the averages that will be useful in second part
-    unsigned int cell_no = cell->user_index();
+    unsigned int cell_no = cell->active_cell_index();//user_index();
     fe_values.reinit (cell);
     fe_values.get_function_values(solution, solution_values);
 
@@ -364,15 +369,22 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
     cell_density_averages[cell_no] /= cell->measure();
 
-    if(cell_density_averages[cell_no]<0.0)
-      AssertThrow(false, ExcMessage("Average density is negative in one cell"));
+    Number eps1 = std::min(eps, cell_density_averages[cell_no]);
 
-    eps = std::min(eps, cell_density_averages[cell_no]);
+    if(eps1<eps)
+    {
+      std::ostringstream oss;
+      oss << "Average density (" << cell_density_averages[cell_no]
+        << ") is too little in cell " << cell_no << " which center is "<<
+        cell->center();
+      std::cout<<oss.str()<<std::endl;
+      //AssertThrow(false, ExcMessage(oss.str()));
+    }
   }
 
   cell = dof_handler.begin_active();
 
-  // TODO Second part in each cell modify density
+  // TODO Second part: in each cell modify density
   // TODO : this is the implementation by Felotti. Can I improve it making it
   // not dimension specific?
   // N is the number of points in the Gauss-Lobatto quadrature; for it to be
@@ -384,20 +396,19 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
   n_q_points = quadrature_x.size();
   std::vector<Number> density_values(n_q_points);
-  std::vector<unsigned int> local_dof_indices(fe.dofs_per_cell);
+  std::vector<unsigned int> global_dof_indices(fe.dofs_per_cell);
 
   const FEValuesExtractors::Scalar density(0);
-
 
   for(; cell != dof_handler.end(); ++cell)
   {
     // Find \theta
-    unsigned int cell_no = cell->user_index();
+    unsigned int cell_no = cell->active_cell_index();//user_index();
     fe_values_x.reinit(cell);
     fe_values_y.reinit(cell);
 
     // - find \rho_min
-    Number rho_min = 1.0;
+    Number rho_min = 1e20;
     fe_values_x[density].get_function_values(solution, density_values);
     for(unsigned int q=0; q<n_q_points; ++q)
        rho_min = std::min(rho_min, density_values[q]);
@@ -407,28 +418,28 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
     // - compute \theta
     Number density_average = cell_density_averages[cell_no];
-    Number quotient = (density_average - eps)/(density_average - rho_min);
-    Number theta1 = std::min(quotient, 1.0);
-
+    // Number quotient = (density_average - eps)/(density_average - rho_min);
+    // Number theta1 = std::min(quotient, 1.0);
+    Number theta1 = std::clamp((density_average - eps) / std::max(density_average - rho_min, 1e-14), 0.0, 1.0);
+    // Number quotient = std::fabs(density_average - eps) /
+    //   (std::fabs(density_average - rho_min) + 1.0e-13);
+    //   Number theta1 = std::min(quotient, 1.0);
     // Modify the solution
     if(theta1 < 1.0)
     {
-       cell->get_dof_indices (local_dof_indices);
+       cell->get_dof_indices (global_dof_indices);
 
        for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
        {
           unsigned int comp_i = fe.system_to_component_index(i).first;
           if(comp_i == 0)
-             solution(local_dof_indices[i]) =
-                theta1           * solution(local_dof_indices[i])
+             solution(global_dof_indices[i]) = 
+                theta1 * solution(global_dof_indices[i])
                 + (1.0 - theta1) * density_average;
        }
     }
   } 
 }
-
-
-
 
 template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::
@@ -438,7 +449,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
     const SolutionType & src,
     const std::pair<unsigned int, unsigned int> & cell_range) const
 {
-  FEEvaluation<dim, degree, n_q_points_1d, dim + 1, Number>
+  FEEvaluation<dim, degree, degree + 1, dim + 1, Number>
     phi(data, 0, 1);
   MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, Number>
     inverse(phi);
@@ -483,16 +494,16 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_cell(
 
     // Loop over quadrature points
     for( unsigned int q = 0; q < phi.n_q_points; ++q){
-      const auto w_q = phi.get_value(q);
-      phi.submit_gradient(eulerian_spray_flux<dim>(w_q), q);
+      //const auto w_q = phi.get_value(q);
+      //phi.submit_gradient(eulerian_spray_flux<dim>(w_q), q);
       // as before, I comment this if and I don't write its body
       // if (body_force.get() != nullptr)
     }
 
-    phi.integrate_scatter((/*(body_force.get() != nullptr) ?
-                                 EvaluationFlags::values :*/
-                                 EvaluationFlags::nothing) |
-                                 EvaluationFlags::gradients, dst);
+    // phi.integrate_scatter((/*(body_force.get() != nullptr) ?
+    //                              EvaluationFlags::values :*/
+    //                              EvaluationFlags::nothing) |
+    //                              EvaluationFlags::gradients, dst);
   }
 }
 
@@ -506,7 +517,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_face(
   const SolutionType & src,
   const std::pair<unsigned int, unsigned int> & face_range) const
 {
-  FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi_m(data, true);
+  FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi_m(data,
+    true);
   FEFaceEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi_p(data,
     false);
   
@@ -518,7 +530,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_face(
     phi_m.reinit(face);
     phi_m.gather_evaluate(src, EvaluationFlags::values);
 
-    for(unsigned int q = 0; q < phi_m.n_q_points; ++q){
+    for(unsigned int q = 0; q < phi_m.n_q_points; ++q)
+    {
       const auto numerical_flux =
         eulerian_spray_numerical_flux<dim>(phi_m.get_value(q),
           phi_p.get_value(q),
