@@ -1,3 +1,6 @@
+#ifndef inc_EulerianSprayOperator_IMP_h
+#define inc_EulerianSprayOperator_IMP_h
+
 #include"EulerianSprayOperator.h"
 #include"InlinedFunctions.h"
 #include<deal.II/fe/fe_system.h> 
@@ -626,7 +629,4 @@ evaluate_function(const Function<dim> &                      function,
   return result;
 }
 
-//Instantiations of the template
-template class EulerianSprayOperator<2, 0, 2>;
-template class EulerianSprayOperator<2, 1, 3>;
-template class EulerianSprayOperator<2, 2, 4>;
+#endif
