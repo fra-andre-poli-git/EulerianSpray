@@ -1,7 +1,8 @@
 #ifndef PARAMETERS_EULERIAN_SPRAY_HH
 #define PARAMETERS_EULERIAN_SPRAY_HH
 
-#include"TypesDefinition.h"
+#include"TypesDefinition.hpp"
+
 #include<deal.II/base/parameter_handler.h>
 
 

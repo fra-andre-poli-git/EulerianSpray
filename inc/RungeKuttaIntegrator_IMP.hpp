@@ -1,7 +1,7 @@
 #ifndef RUNGE_KUTTA_INTEGRATOR_IMP_H
 #define RUNGE_KUTTA_INTEGRATOR_IMP_H  
-#include"RungeKuttaIntegrator.h"
-#include"TypesDefinition.h"
+#include"RungeKuttaIntegrator.hpp"
+#include"TypesDefinition.hpp"
 #include"EulerianSprayOperator.hpp"
 #include<deal.II/base/time_stepping.h>
 

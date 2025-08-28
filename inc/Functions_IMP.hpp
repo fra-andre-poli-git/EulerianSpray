@@ -1,8 +1,9 @@
 #ifndef FUNCTIONS_IMP_HPP
 #define FUNCTIONS_IMP_HPP
 
-#include"Functions.h"
-#include"TypesDefinition.h"
+#include"Functions.hpp"
+#include"TypesDefinition.hpp"
+
 #include<deal.II/base/point.h>
 #include<cmath>
 

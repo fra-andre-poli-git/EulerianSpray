@@ -1,13 +1,13 @@
 #ifndef EULERIAN_SPRAY_OPERATOR_IMP_H
 #define EULERIAN_SPRAY_OPERATOR_IMP_H
 #include"EulerianSprayProblem.hpp"
-#include"TypesDefinition.h"
-#include"RungeKuttaIntegrator.h"
+#include"TypesDefinition.hpp"
+#include"RungeKuttaIntegrator.hpp"
 #include"RungeKuttaIntegrator_IMP.hpp"
-#include"Functions.h"
+#include"Functions.hpp"
 #include"Functions_IMP.hpp"
-#include"InlinedFunctions.h"
-#include"Parameters.h"
+#include"InlinedFunctions.hpp"
+#include"Parameters.hpp"
 
 
 #include<deal.II/grid/grid_generator.h>

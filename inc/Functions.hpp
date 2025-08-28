@@ -1,7 +1,8 @@
 #ifndef EULERIAN_SPRAY_INITIAL_SOLUTION_HH
 #define EULERIAN_SPRAY_INITIAL_SOLUTION_HH
 
-#include"Parameters.h"
+#include"Parameters.hpp"
+
 #include<deal.II/base/function.h>
 
 

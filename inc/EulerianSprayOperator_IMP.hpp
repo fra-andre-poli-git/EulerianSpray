@@ -1,8 +1,8 @@
 #ifndef inc_EulerianSprayOperator_IMP_h
 #define inc_EulerianSprayOperator_IMP_h
 
-#include"EulerianSprayOperator.h"
-#include"InlinedFunctions.h"
+#include"EulerianSprayOperator.hpp"
+#include"InlinedFunctions.hpp"
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
 #include<deal.II/fe/fe_values_extractors.h> 

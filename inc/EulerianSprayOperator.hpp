@@ -1,7 +1,7 @@
 #ifndef EULERIAN_SPRAY_OPERATOR_HH
 #define EULERIAN_SPRAY_OPERATOR_HH
 
-#include"TypesDefinition.h"
+#include"TypesDefinition.hpp"
 
 #include<deal.II/matrix_free/matrix_free.h>
 #include<deal.II/base/function.h>

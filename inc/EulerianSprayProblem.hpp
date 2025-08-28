@@ -1,11 +1,11 @@
 #ifndef EULERIAN_SPRAY_PROBLEM_HH
 #define EULERIAN_SPRAY_PROBLEM_HH
 
-#include"TypesDefinition.h"
+#include"TypesDefinition.hpp"
 #include"EulerianSprayOperator.hpp"
-#include"EulerianSprayOperator_IMP.h"
-#include"InlinedFunctions.h"
-#include"Parameters.h"
+#include"EulerianSprayOperator_IMP.hpp"
+#include"InlinedFunctions.hpp"
+#include"Parameters.hpp"
 
 #include<deal.II/grid/tria.h>
 #include<deal.II/fe/fe_system.h> 
