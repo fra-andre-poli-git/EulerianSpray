@@ -5,6 +5,7 @@
 */
 #include<iostream>
 #include"EulerianSprayProblem.h"
+#include"EulerianSprayProblem_IMP.hpp"
 #include"Parameters.h"
 
 #include<deal.II/base/parameter_handler.h>
