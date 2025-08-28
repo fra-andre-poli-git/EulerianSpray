@@ -16,7 +16,7 @@ set(TARGET "main")
 # in the "CMake in user projects" page accessible from the "User info"
 # page of the documentation.
   file(GLOB_RECURSE TARGET_SRC "src/*.cpp")
-  file(GLOB_RECURSE TARGET_INC "inc/*.h")
+  file(GLOB_RECURSE TARGET_INC "inc/*.hpp" "inc/*.h")
 set(TARGET_SRC ${TARGET_SRC} ${TARGET_INC})
 
 
