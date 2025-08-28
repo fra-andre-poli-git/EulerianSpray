@@ -2,7 +2,7 @@
 #define EULERIAN_SPRAY_PROBLEM_HH
 
 #include"TypesDefinition.h"
-#include"EulerianSprayOperator.h"
+#include"EulerianSprayOperator.hpp"
 #include"EulerianSprayOperator_IMP.h"
 #include"InlinedFunctions.h"
 #include"Parameters.h"

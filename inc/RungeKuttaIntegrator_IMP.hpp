@@ -2,7 +2,7 @@
 #define RUNGE_KUTTA_INTEGRATOR_IMP_H  
 #include"RungeKuttaIntegrator.h"
 #include"TypesDefinition.h"
-#include"EulerianSprayOperator.h"
+#include"EulerianSprayOperator.hpp"
 #include<deal.II/base/time_stepping.h>
 
 template <typename VectorType, typename Operator, int dim>
