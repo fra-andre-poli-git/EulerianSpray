@@ -1,6 +1,6 @@
 #ifndef EULERIAN_SPRAY_OPERATOR_IMP_H
 #define EULERIAN_SPRAY_OPERATOR_IMP_H
-#include"EulerianSprayProblem.h"
+#include"EulerianSprayProblem.hpp"
 #include"TypesDefinition.h"
 #include"RungeKuttaIntegrator.h"
 #include"RungeKuttaIntegrator_IMP.hpp"

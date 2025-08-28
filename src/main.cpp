@@ -4,7 +4,7 @@
 	The reference for this program is Step-67 of deal.ii tutorials.
 */
 #include<iostream>
-#include"EulerianSprayProblem.h"
+#include"EulerianSprayProblem.hpp"
 #include"EulerianSprayProblem_IMP.hpp"
 #include"Parameters.h"
 
