@@ -1,6 +1,7 @@
 #include"EulerianSprayProblem.h"
 #include"TypesDefinition.h"
 #include"RungeKuttaIntegrator.h"
+#include"RungeKuttaIntegrator_IMP.hpp"
 #include"Functions.h"
 #include"InlinedFunctions.h"
 #include"Parameters.h"
