@@ -3,7 +3,7 @@
 
 #include"TypesDefinition.h"
 #include"EulerianSprayOperator.h"
-#include"EulerianSprayOperator_IMP.hpp"
+#include"EulerianSprayOperator_IMP.h"
 #include"InlinedFunctions.h"
 #include"Parameters.h"
 
