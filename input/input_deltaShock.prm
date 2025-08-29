@@ -16,7 +16,7 @@ subsection Integrator parameters
 #  forward_euler,
 #  ssp_stage_2_order_2,
 #  ssp_stage_3_order_3,
-  set Runge Kutta scheme = ssp_stage_3_order_3
+  set Runge Kutta scheme = forward_euler
 end
 
 subsection Operator parameters
