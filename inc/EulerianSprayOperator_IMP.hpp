@@ -91,18 +91,17 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply(
   (void) current_time;
   // In this block I apply the nonlinear operator proper
   {
-      // This is for the output, I may use it later
-      // TimerOutput::Scope t(timer, "apply - integrals");
-
-      data.loop(& EulerianSprayOperator::local_apply_cell,
-        & EulerianSprayOperator::local_apply_face,
-        & EulerianSprayOperator::local_apply_boundary_face,
-        this,
-        dst,
-        src,
-        true,
-        MatrixFree<dim, Number>::DataAccessOnFaces::values,
-        MatrixFree<dim, Number>::DataAccessOnFaces::values);
+    // This is for the output, I may use it later
+    // TimerOutput::Scope t(timer, "apply - integrals");
+    data.loop(& EulerianSprayOperator::local_apply_cell,
+    & EulerianSprayOperator::local_apply_face,
+    & EulerianSprayOperator::local_apply_boundary_face,
+    this,
+    dst,
+    src,
+    true,
+    MatrixFree<dim, Number>::DataAccessOnFaces::values,
+    MatrixFree<dim, Number>::DataAccessOnFaces::values);
   }
   // In this block I apply the inverse matrix
   {
@@ -343,13 +342,14 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   // QGauss<dim> quadrature_formula(
   //   degree == 0 ?  1 :
   //   (degree % 2 == 1 ? (degree + 1)/2 : (degree + 2)/2));
-  QGauss<dim>   quadrature_formula(fe.degree+1);
+  QGauss<dim>   quadrature_formula(fe.degree*2-1);
   unsigned int n_q_points = quadrature_formula.size();
 
   FEValues<dim> fe_values (mapping,
     fe,
     quadrature_formula,
     update_values | update_JxW_values);
+    
   std::vector<Vector<double> > solution_values(n_q_points,
     Vector<double>(dim+1));
 
@@ -474,6 +474,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_cell(
         SolutionType & dst,
         const SolutionType &src,
         const std::pair<unsigned int, unsigned int> & cell_range) const{
+  (void) dst;
   // This is a class that provides all functions necessary to evaluate functions
   // at quadrature points and cell integrations. 
   FEEvaluation<dim, degree, n_q_points_1d, dim + 1, Number> phi(data);

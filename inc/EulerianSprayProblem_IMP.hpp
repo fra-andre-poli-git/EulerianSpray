@@ -72,6 +72,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
         0,
         periodicity_vector);
       triangulation.add_periodicity(periodicity_vector);
+      break;
     }
     // Vacuum
     case 2:

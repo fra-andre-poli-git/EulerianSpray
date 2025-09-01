@@ -20,6 +20,7 @@ double InitialSolution<dim>::value(const Point<dim> & p,
         return 1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
       if(component == 1)
         return -1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
+      return 0.;
     }
     case 2:
     {
