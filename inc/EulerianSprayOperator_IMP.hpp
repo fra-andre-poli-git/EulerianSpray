@@ -3,6 +3,7 @@
 
 #include"EulerianSprayOperator.hpp"
 #include"InlinedFunctions.hpp"
+
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
 #include<deal.II/fe/fe_values_extractors.h> 
@@ -342,7 +343,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   // QGauss<dim> quadrature_formula(
   //   degree == 0 ?  1 :
   //   (degree % 2 == 1 ? (degree + 1)/2 : (degree + 2)/2));
-  QGauss<dim>   quadrature_formula(fe.degree*2-1);
+  QGauss<dim>   quadrature_formula(std::max(1, static_cast<int>(fe.degree)*2 - 1));
   unsigned int n_q_points = quadrature_formula.size();
 
   FEValues<dim> fe_values (mapping,
