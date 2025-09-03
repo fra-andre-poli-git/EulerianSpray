@@ -95,23 +95,23 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply(
     // This is for the output, I may use it later
     // TimerOutput::Scope t(timer, "apply - integrals");
     data.loop(& EulerianSprayOperator::local_apply_cell,
-    & EulerianSprayOperator::local_apply_face,
-    & EulerianSprayOperator::local_apply_boundary_face,
-    this,
-    dst,
-    src,
-    true,
-    MatrixFree<dim, Number>::DataAccessOnFaces::values,
-    MatrixFree<dim, Number>::DataAccessOnFaces::values);
+      & EulerianSprayOperator::local_apply_face,
+      & EulerianSprayOperator::local_apply_boundary_face,
+      this,
+      dst,
+      src,
+      true,
+      MatrixFree<dim, Number>::DataAccessOnFaces::values,
+      MatrixFree<dim, Number>::DataAccessOnFaces::values);
   }
   // In this block I apply the inverse matrix
   {
     // TimerOutput::Scope t(timer, "apply - inverse mass");
     
     data.cell_loop(& EulerianSprayOperator::local_apply_inverse_mass_matrix,
-                    this,
-                    dst,
-                    dst);
+      this,
+      dst,
+      dst);
   }
 }
 
@@ -499,16 +499,16 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_cell(
 
     // Loop over quadrature points
     for( unsigned int q = 0; q < phi.n_q_points; ++q){
-      //const auto w_q = phi.get_value(q);
-      //phi.submit_gradient(eulerian_spray_flux<dim>(w_q), q);
+      const auto w_q = phi.get_value(q);
+      phi.submit_gradient(eulerian_spray_flux<dim>(w_q), q);
       // as before, I comment this if and I don't write its body
       // if (body_force.get() != nullptr)
     }
 
-    // phi.integrate_scatter((/*(body_force.get() != nullptr) ?
-    //                              EvaluationFlags::values :*/
-    //                              EvaluationFlags::nothing) |
-    //                              EvaluationFlags::gradients, dst);
+     phi.integrate_scatter((/*(body_force.get() != nullptr) ?
+                                  EvaluationFlags::values :*/
+                                  EvaluationFlags::nothing) |
+                                  EvaluationFlags::gradients, dst);
   }
 }
 
