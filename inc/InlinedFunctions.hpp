@@ -57,8 +57,9 @@ operator * ( const Tensor<1, n_components, Tensor<1, dim, Number>> & matrix,
 }
 
 // This function returns the numerical flux already multiplied by the normal
-// vector. I am using local Lax-Friedrichs, but the structure can accept other
-// flux definitions through the switch.
+// vector. "normal" refers to the outward one. I started using local
+// Lax-Friedrichs, but the structure can accept other flux definitions
+// through the switch.
 template <int dim, typename Number>
 inline DEAL_II_ALWAYS_INLINE
 Tensor<1, dim + 1, Number>
@@ -77,17 +78,105 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   {
     case local_lax_friedrichs:
     {
-      // Original
-      auto v_p_times_n = (velocity_plus * normal);
-      auto v_m_times_n = (velocity_minus * normal);
-      // TODO: why do I have to take the absolute values?
-      const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
+      // According to ... TODO add reference
+      // auto v_p_times_n = (velocity_plus * normal);
+      // auto v_m_times_n = (velocity_minus * normal);
+      // const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
 
-      // This is according to Sabat et al. TODO: I can't find it on Sabat et al, find it
-      // const auto delta = std::max(velocity_plus.norm() , velocity_minus.norm());
+      // This is according to step 67
+      const auto delta = std::max(velocity_plus.norm(), velocity_minus.norm());
 
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
         0.5 * delta * (w_minus - w_plus);
+    }
+    case godunov:
+    {
+      // // Taken from Bouchout Jin Li
+      // const Number density_minus = w_minus[0];
+      // const Number density_plus = w_plus[0];
+      // const Number rho_m_sqrt = std::sqrt(density_minus);
+      // const Number rho_p_sqrt = std::sqrt(density_plus);
+      // const Number u_delta = ((rho_m_sqrt * (velocity_minus * normal) +
+      //   rho_p_sqrt * (velocity_plus * normal))/(rho_m_sqrt + rho_p_sqrt));
+
+      // // Now, one may think, like me, that u_delta is a Number, therefore a
+      // // double. Well, THEY ARE WRONG, because, thanks to the macro 
+      // // DEAL_II_ALWAYS_INLINE, it is a dealii::VectorizedArray<double, 2>
+      // // Vectorization should speed up the performance, so I will keep it,
+      // // therefore now I have to deal with it
+
+      // Tensor<1, dim + 1, Number> flux;
+
+      // unsigned int vectorization_dimension = u_delta.size();
+
+      // for(unsigned int v=0; v<vectorization_dimension; ++v)
+      // {
+      //   if(u_delta[v]>1e-16)
+      //   {//flux_minus*normal
+      //     auto normal_flux = flux_minus*normal;
+      //     for(unsigned int d=0; d<dim+1; ++d)
+      //     {
+      //       flux[d][v]=normal_flux[d][v];
+      //     }
+      //   }
+      //   else if(-u_delta[v]>1e-16)
+      //   {//flux_plus*normal
+      //     auto normal_flux = flux_plus*normal;
+      //     for(unsigned int d=0; d<dim+1; ++d)
+      //     {
+      //       flux[d][v]=normal_flux[d][v];
+      //     }
+      //   }
+      //   else
+      //   {//0.5*(flux_plus * normal + flux_minus * normal)
+      //     auto normal_flux = 0.5*(flux_plus * normal + flux_minus * normal);
+      //     for(unsigned int d=0; d<dim+1; ++d)
+      //     {
+      //       flux[d][v]=normal_flux[d][v];
+      //     }
+      //   }
+      // }
+      // return flux;
+
+      // Taken from Yang, Wei, Shu, 2013
+      const Number density_minus = w_minus[0];
+      const Number density_plus = w_plus[0];
+
+      const auto normal_velocity_minus = (velocity_minus * normal);
+      const auto normal_velocity_plus = (velocity_plus * normal);
+
+      // Now, one may think, like me, that normal_velocity is a Number,
+      // therefore a double. Well, THEY ARE WRONG, because, thanks to the macro 
+      // DEAL_II_ALWAYS_INLINE, it is a dealii::VectorizedArray<double, 2>
+      // Vectorization should speed up the performance, so I will keep it,
+      // therefore now I have to deal with it
+
+      unsigned int vectorization_dimension = normal_velocity_minus.size();
+      
+      Tensor<1, dim + 1, Number> flux;
+    
+      for(unsigned int v=0; v<vectorization_dimension; ++v)
+      {
+        if(normal_velocity_minus > 0 && normal_velocity_plus > 0)
+        return flux_minus * normal;
+        else if(normal_velocity_minus <= 0 && normal_velocity_plus <=0)
+          return flux_plus * normal;
+        else if(normal_velocity_minus <= 0 && normal_velocity_plus > 0)
+          return Tensor<1, dim + 1, Number>() ;// Zero flux
+        else if(normal_velocity_minus > 0 && normal_velocity_plus <= 0)
+        {
+          const Number rho_m_sqrt = std::sqrt(density_minus);
+          const Number rho_p_sqrt = std::sqrt(density_plus);
+          const Number u_delta = ((rho_m_sqrt * normal_velocity_minus +
+            rho_p_sqrt * normal_velocity_plus)/(rho_m_sqrt + rho_p_sqrt));
+          if(u_delta >= 0)
+            return flux_minus * normal;
+          else if(u_delta < 0)
+            return flux_plus * normal;
+          else
+            return 0.5 * (flux_minus * normal + flux_plus * normal);
+        }
+      }
     }
     case local_lax_friedrichs_modified:
     {
@@ -109,55 +198,6 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
       return inverse_s *
         ((s_pos * (flux_minus * normal) - s_neg * (flux_plus * normal)) -
         s_pos * s_neg * (w_minus - w_plus));
-    }
-    case godunov:
-    {
-      // Taken from Bouchout Jin Li
-      const Number density_minus = w_minus[0];
-      const Number density_plus = w_plus[0];
-      const Number rho_m_sqrt = std::sqrt(density_minus);
-      const Number rho_p_sqrt = std::sqrt(density_plus);
-      const Number u_delta = ((rho_m_sqrt * (velocity_minus * normal) +
-        rho_p_sqrt * (velocity_plus * normal))/(rho_m_sqrt + rho_p_sqrt));
-
-      // Now, one may think, like me, that u_delta is a Number, therefore a
-      // double. Well, THEY ARE WRONG, because, thanks to the macro 
-      // DEAL_II_ALWAYS_INLINE, it is a dealii::VectorizedArray<double, 2>
-      // Vectorization should speed up the performance, so I will keep it,
-      // therefore now I have to deal with it
-
-      Tensor<1, dim + 1, Number> flux;
-
-      unsigned int vectorization_dimension = u_delta.size();
-
-      for(unsigned int v=0; v<vectorization_dimension; ++v)
-      {
-        if(u_delta[v]>1e-16)
-        {//flux_minus*normal
-          auto normal_flux = flux_minus*normal;
-          for(unsigned int d=0; d<dim+1; ++d)
-          {
-            flux[d][v]=normal_flux[d][v];
-          }
-        }
-        else if(-u_delta[v]>1e-16)
-        {//flux_plus*normal
-          auto normal_flux = flux_plus*normal;
-          for(unsigned int d=0; d<dim+1; ++d)
-          {
-            flux[d][v]=normal_flux[d][v];
-          }
-        }
-        else
-        {//0.5*(flux_plus * normal + flux_minus * normal)
-          auto normal_flux = 0.5*(flux_plus * normal + flux_minus * normal);
-          for(unsigned int d=0; d<dim+1; ++d)
-          {
-            flux[d][v]=normal_flux[d][v];
-          }
-        }
-      }
-      return flux;
     }
     default:
     {
