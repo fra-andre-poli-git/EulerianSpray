@@ -4,7 +4,8 @@
 #include<deal.II/base/tensor.h>
 
 // This file contains some useful inlined functions used in the computations
-// made by EulerianSprayOperator 
+// made by EulerianSprayOperator to compute some quantities.
+// TODO: I should opt for a more meaningful name for this file
 
 // This function returns the velocity $\underline{v}$ from the vector of
 // conserved quantities $\undeline{w}=[ \rho, \rho u_1, ..., \rho u_d]
@@ -78,7 +79,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
   {
     case local_lax_friedrichs:
     {
-      // According to ... TODO add reference
+      // According to ... Forcella? TODO add reference
       // auto v_p_times_n = (velocity_plus * normal);
       // auto v_m_times_n = (velocity_minus * normal);
       // const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
@@ -157,26 +158,54 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
     
       for(unsigned int v=0; v<vectorization_dimension; ++v)
       {
-        if(normal_velocity_minus > 0 && normal_velocity_plus > 0)
-        return flux_minus * normal;
-        else if(normal_velocity_minus <= 0 && normal_velocity_plus <=0)
-          return flux_plus * normal;
-        else if(normal_velocity_minus <= 0 && normal_velocity_plus > 0)
-          return Tensor<1, dim + 1, Number>() ;// Zero flux
-        else if(normal_velocity_minus > 0 && normal_velocity_plus <= 0)
+        if(normal_velocity_minus[v] > 0 && normal_velocity_plus[v] > 0)
         {
+          auto normal_flux = flux_minus*normal;
+          for(unsigned int d=0; d<dim+1; ++d)
+            flux[d][v]= normal_flux[d][v];
+        }
+        else if(normal_velocity_minus[v] <= 0 && normal_velocity_plus[v] <=0)
+        {
+          auto normal_flux = flux_plus*normal;
+          for(unsigned int d=0; d<dim+1; ++d)
+            flux[d][v]= normal_flux[d][v];
+        }
+        else if(normal_velocity_minus[v] <= 0 && normal_velocity_plus[v] > 0)
+        {
+          for(unsigned int d=0; d<dim+1; ++d)
+            flux[d][v]= 0.0;
+        }
+        else if(normal_velocity_minus[v] > 0 && normal_velocity_plus[v] <= 0)
+        {
+          // I compute u_delta here, since it is needed only in this case.
+          // In this way, however, I may compute it more than once for each
+          // vectorization dimension. TODO: check if this is a problem
+          // performance-wise.
           const Number rho_m_sqrt = std::sqrt(density_minus);
           const Number rho_p_sqrt = std::sqrt(density_plus);
           const Number u_delta = ((rho_m_sqrt * normal_velocity_minus +
             rho_p_sqrt * normal_velocity_plus)/(rho_m_sqrt + rho_p_sqrt));
-          if(u_delta >= 0)
-            return flux_minus * normal;
-          else if(u_delta < 0)
-            return flux_plus * normal;
+          if(u_delta[v] >= 0)
+          {
+            auto normal_flux = flux_minus*normal;
+            for(unsigned int d=0; d<dim+1; ++d)
+              flux[d][v]= normal_flux[d][v];
+          }
+          else if(u_delta[v] < 0)
+          {
+            auto normal_flux = flux_plus*normal;
+            for(unsigned int d=0; d<dim+1; ++d)
+              flux[d][v]= normal_flux[d][v];
+          }
           else
-            return 0.5 * (flux_minus * normal + flux_plus * normal);
+          {
+            auto normal_flux = 0.5 * (flux_minus * normal + flux_plus * normal);
+            for(unsigned int d=0; d<dim+1; ++d)
+              flux[d][v]= normal_flux[d][v];
+          }
         }
       }
+      return flux;
     }
     case local_lax_friedrichs_modified:
     {
