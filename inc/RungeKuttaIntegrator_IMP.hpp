@@ -59,8 +59,8 @@ LSRungeKuttaIntegrator<VectorType,Operator, dim>::n_stages() const
 // understand the interface with a Matrix Free implementation is not possible.
 // The future implementation may be very general to all explicit Runge Kutta
 // schemes, but can be also very expansive if the method is a low storage one,
-// since in this implementation I mantain al Ki up to the computation of the new
-// solution
+// since in this implementation I maintain all Ki up to the computation of the
+// new solution
 template <typename VectorType, typename Operator, int dim>
 void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const Operator &pde_operator,
@@ -83,7 +83,7 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     vec_ri,
     solution,
     vec_ri);
-  pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+  //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
@@ -96,7 +96,7 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         vec_ki,
         solution,
         vec_ri);
-      pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+     // pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
     }
 }
 
@@ -179,7 +179,6 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     // Flux limiter
     pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   }
-  
 }
 
 template <typename VectorType, typename Operator, int dim>
