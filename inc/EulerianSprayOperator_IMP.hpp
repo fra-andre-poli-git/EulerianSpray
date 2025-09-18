@@ -11,7 +11,8 @@
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
 
-#include <algorithm>
+#include<algorithm>
+#include<cmath>
 
 template <int dim, int degree, int n_q_points_1d>
 EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
@@ -331,120 +332,43 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   const MappingQ1<dim> & mapping,
   const FESystem<dim> & fe) const
 {
-  const unsigned int density_component = 0;
 
-
-
-
-
-
-
-  // I create a vector to store the values of cell averages of density
-  std::vector<Number> cell_density_averages(
-    dof_handler.get_triangulation().n_active_cells(), 0.0);
-
-  // QGauss<dim> quadrature_formula(
-  //   degree == 0 ?  1 :
-  //   (degree % 2 == 1 ? (degree + 1)/2 : (degree + 2)/2));
-  QGauss<dim>   quadrature_formula(std::max(1, static_cast<int>(fe.degree)*2 - 1));
-  unsigned int n_quad_points = quadrature_formula.size();
-
+  //-------------------------Compute cell averages------------------------------
+  std::vector< deallii::Vector>> cell_averages;
+  QGauss<dim>   quadrature_formula(
+    static_cast<unsigned int>std::ceil(fe.degree + 1)/.2);
+  unsigned int n_q_points = quadrature_formula.size();
   FEValues<dim> fe_values (mapping,
     fe,
     quadrature_formula,
     update_values | update_JxW_values);
-    
-  std::vector<Vector<double> > solution_values(n_quad_points,
-    Vector<double>(dim+1));
-
-  // In this loop I compute the average value of the density
-  // TODO I could vectorize it using FEEvaluation instead of FEValues
+  // Loop over active cells
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
     endc = dof_handler.end();
   for(; cell!=endc; ++cell)
   {
-    // I store the averages that will be useful in second part
-    unsigned int cell_no = cell->active_cell_index();//user_index();
-    fe_values.reinit (cell);
-    fe_values.get_function_values(solution, solution_values);
+    // Compute cell average
 
-    cell_density_averages[cell_no] = 0.0;
-
-    for (unsigned int q=0; q<n_quad_points; ++q)
-      cell_density_averages[cell_no] += solution_values[q][0] * fe_values.JxW(q);
-
-    cell_density_averages[cell_no] /= cell->measure();
   }
 
+  //-------------------------Modify the solution--------------------------------
+  // Set up a small number
+  epsilon = 1e-13;
 
-
-  // Find mininimum density in the whole grid
-  const double eps = 1.0e-16;
-  for (unsigned int c=0; c<dof_handler.get_triangulation().n_active_cells(); ++c)
+  // Loop over cells
+  for (/*every active cell*/)
   {
-    double eps1 = cell_density_averages[c];
-    if(eps1 < eps)
+
+    if(/*cell average is below epsilon*/)
     {
-      //std::cout << "\n Negative state at position " << cell0->center() << "\n\n";
-      AssertThrow(false, ExcMessage("Fatal: Negative states"));
+      // Set the solution as the mean value
     }
-  }
-
-   // Need 2N - 3 >= degree for the quadrature to be exact.
- // Choose same order as used for assembly process.
- unsigned int N = (fe.degree+3)%2==0 ? (fe.degree+3)/2 : (fe.degree+4)/2;
- Quadrature<dim> quadrature_x (QGaussLobatto<1>(N), QGauss<1>(fe.degree+1));
- Quadrature<dim> quadrature_y (QGauss<1>(fe.degree+1), QGaussLobatto<1>(N));
- FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
- FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
-
- const unsigned int n_q_points = quadrature_x.size();
- std::vector<double> density_values(n_q_points), energy_values(n_q_points);
- std::vector< Tensor<1,dim> > momentum_values(n_q_points);
- std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
-
- const FEValuesExtractors::Scalar density  (density_component);
- const FEValuesExtractors::Vector momentum (1);
-
-  cell = dof_handler.begin_active();
-
- for(; cell != endc; ++cell)
- {
-    unsigned int c = cell->active_cell_index();
-    fe_values_x.reinit(cell);
-    fe_values_y.reinit(cell);
-
-    // First limit density
-    // find minimum density at GLL points
-    double rho_min = 1.0e20;
-
-    fe_values_x[density].get_function_values(solution, density_values);
-    for(unsigned int q=0; q<n_q_points; ++q)
-       rho_min = std::min(rho_min, density_values[q]);
-
-    fe_values_y[density].get_function_values(solution, density_values);
-    for(unsigned int q=0; q<n_q_points; ++q)
-       rho_min = std::min(rho_min, density_values[q]);
-
-    double density_average = cell_density_averages[c];
-    double rat = std::fabs(density_average - eps) /
-                 (std::fabs(density_average - rho_min));
-    double theta1 = std::min(rat, 1.0);
-
-    if(theta1 < 1.0)
+    else
     {
-       cell->get_dof_indices (local_dof_indices);
-
-       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
-       {
-          unsigned int comp_i = fe.system_to_component_index(i).first;
-          if(comp_i == density_component)
-             solution(local_dof_indices[i]) =
-                theta1           * solution(local_dof_indices[i])
-                + (1.0 - theta1) * density_average;
-       }
-    }    
+      // Modify the density
+      // Modify the velocity
+    }
   }
 }
 
