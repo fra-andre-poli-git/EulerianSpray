@@ -318,35 +318,36 @@ void EulerianSprayProblem<dim, degree>::run()
 
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
-  double min_vertex_distance = std::numeric_limits<double>::max();
+  double min_cell_measure = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction even though for now I have made them squared
   if(parameters.testcase==1 || parameters.testcase==2 || parameters.testcase==3
     || parameters.testcase==4)
   {
     for(const auto & cell : triangulation.active_cell_iterators())
-      min_vertex_distance = 
-        std::min(min_vertex_distance, cell->extent_in_direction(0));
+      min_cell_measure =
+        std::min(min_cell_measure, cell->measure());
   }
   // Otherwise I will use the minimum distance between vertices
   else
   {
     for(const auto & cell : triangulation.active_cell_iterators())
-      min_vertex_distance =
-        std::min(min_vertex_distance, cell->minimum_vertex_distance());
+      min_cell_measure =
+        std::min(min_cell_measure, cell->measure());
   }
   
   
   // with MPI here I have to make the minimum over all processors
-  min_vertex_distance =
-    Utilities::MPI::min(min_vertex_distance, MPI_COMM_WORLD);
+  min_cell_measure =
+    Utilities::MPI::min(min_cell_measure, MPI_COMM_WORLD);
   double CFL = 1./2;
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
-   time_step = CFL/
-    Utilities::truncate_to_n_digits(
-      eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+  //  time_step = CFL/
+  //   Utilities::truncate_to_n_digits(
+  //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+  time_step = CFL*min_cell_measure / eulerian_spray_operator.compute_cell_transport_speed(solution);
   pcout << "Time step size: " << time_step
-    << ", minimal h: " << min_vertex_distance
+    << ", minimal h: " << min_cell_measure
     << std::endl
     << std::endl;
 
@@ -380,6 +381,7 @@ void EulerianSprayProblem<dim, degree>::run()
     time_step = CFL/
       Utilities::truncate_to_n_digits(
         eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+    // time_step = CFL*min_cell_measure/ eulerian_spray_operator.compute_cell_transport_speed(solution);
     if((time + time_step) >= final_time)
         time_step = final_time - time;
     pcout<<"New time step: "<<time_step<<std::endl;
