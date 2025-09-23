@@ -27,7 +27,7 @@ EulerianSprayProblem<dim, degree>::EulerianSprayProblem(
   const Parameters & params):
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
     parameters(params),    
-    fe(FE_DGQ<dim>(degree),dim+1),
+    fe(FE_DGQ<dim>(degree),dim+1), // Lagrange basis functions
     mapping(),
     dof_handler(triangulation),
     time(0),
