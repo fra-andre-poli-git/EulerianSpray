@@ -324,7 +324,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
 // This function applies the limiter given by Zhang, Shu,
 // "On positivity-preserving high order discontinuous Galerkin schemes for 
 // compressible Euler equations on rectangular meshes", adapted to the
-// pressureless gas dynamics system of equations
+// pressureless gas dynamics system of equations.
+// This implementation is tied to Lagrange basis functions on quadrilaterals
 template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter(
   SolutionType & solution,
@@ -334,7 +335,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 {
 
   //-------------------------Compute cell averages------------------------------
-  std::vector< deallii::Vector>> cell_averages;
+  std::vector< dealii::Vector<Number>> cell_averages;
   QGauss<dim>   quadrature_formula(
     static_cast<unsigned int>std::ceil(fe.degree + 1)/.2);
   unsigned int n_q_points = quadrature_formula.size();
@@ -342,6 +343,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
     fe,
     quadrature_formula,
     update_values | update_JxW_values);
+  std::vector<dealii::Vector<Number>> local_solution_values(n_q_points,
+    dealii::Vector<Number>(dim+1));
   // Loop over active cells
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
@@ -349,25 +352,75 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   for(; cell!=endc; ++cell)
   {
     // Compute cell average
-
+    unsigned int cell_no = cell->active_cell_index();
+    fe_values.reinit(cell);
+    fe_values.get_function_values(solution, local_solution_values);
+    cell_averages.push_back(dealii::Vector<Number>(dim+1));
+    for(unsigned int q=0; q<n_q_points; ++q)
+      for(unsigned int d=0; d<dim+1; ++d)
+        cell_averages[cell_no][d] += local_solution_values[q][d]*
+          fe_values.JxW(q);
+    for(unsigned int d=0; d<dim+1; ++d)
+      cell_averages[cell_no][d] /= cell->measure(); 
   }
 
   //-------------------------Modify the solution--------------------------------
+  // TODO: this implementation is only for 1D cases, extend it to general dim
   // Set up a small number
   epsilon = 1e-13;
-
+  // Set the quadrature points
+  // For the moment I use a quadrature formula only for 1D in disguise
+  // since I first test the limiter in 1D cases. TODO: extend it to 2D and
+  // if possible to 3D eventually.
+  unsigned int N = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  QGauss<dim> quadrature_x (QGaussLobatto<1>(N), QGauss<1>(degree +1));
+  FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
+  n_q_points = quadrature_x.size();
+  std::vector<Number> density_values(n_q_points);
   // Loop over cells
-  for (/*every active cell*/)
+  cell = dof_handler.begin_active();
+  std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
+  for (; cell!=endc; ++cell)
   {
-
-    if(/*cell average is below epsilon*/)
+    unsigned int cell_no = cell->active_cell_index();
+    cell->get_dof_indices(local_dof_indices);
+    Number cell_average_density = cell_averages[cell_no][0];
+    if(cell_average_density < epsilon)
     {
-      // Set the solution as the mean value
+      // Set the mean value as solution
+      // Loop over DoFs
+      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      {
+        // Each DoF is associated to a different component of the system
+        unsigned int comp_i = fe.system_to_component_index(i).first;
+        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
+      }
     }
     else
     {
+      fe_values_x.reinit(cell);
+
       // Modify the density
+      Number rho_min = std::numeric_limits<Number>::max();
+      fe_values_x[density].get_function_values(solution, density_values);
+      for(unsigned int q=0; q<n_q_points; ++q)
+        rho_min = std::min(rho_min, density_values[q]);
+      Number theta = (cell_average_density - rho_min)/
+        (cell_average_density - rho_min);
+      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      {
+        // Each DoF is associated to a different component of the system
+        unsigned int comp_i = fe.system_to_component_index(i).first;
+        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+          theta * 
+          (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+      }
+      
       // Modify the velocity
+      // TODO: here it works differently in 2D
+      
+
+      
     }
   }
 }
