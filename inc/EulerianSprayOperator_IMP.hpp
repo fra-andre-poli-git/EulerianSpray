@@ -1,8 +1,6 @@
-#ifndef inc_EulerianSprayOperator_IMP_h
-#define inc_EulerianSprayOperator_IMP_h
-
 #include"EulerianSprayOperator.hpp"
 #include"InlinedFunctions.hpp"
+#include"FindIntersection.hpp"
 
 #include<deal.II/fe/fe_system.h> 
 #include<deal.II/fe/mapping_q.h>
@@ -398,8 +396,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
     }
     else
     {
+      // I use the projection inroduced by Yang, Wei, SHu, in [49]. 
+      // In [42] are showed different chices for the projection
       fe_values_x.reinit(cell);
-
       // Modify the density
       Number rho_min = std::numeric_limits<Number>::max();
       fe_values_x[density].get_function_values(solution, density_values);
@@ -415,12 +414,25 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
           theta * 
           (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
       }
-      
+      double theta_j = 1.0;
       // Modify the velocity
-      // TODO: here it works differently in 2D
+      for(/*every quadreture point in the cell*/){
+        // TODO: here I should modify this structure to work in 2D and 3D
+        // Find s, the intersection between q - \line{w} and \partial G_\epsilon
+        dealii::Tensor<1, dim> s;
+        // Compute theta^i_j = ||s - \line{w}||/||q - \line{w}||
+        // Compare theta^i_j with theta_j and set theta_j = min(theta_j, theta^i_j)
+      }
       
-
-      
+      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      {
+        // Each DoF is associated to a different component of the system
+        unsigned int comp_i = fe.system_to_component_index(i).first;
+        if(comp_i > 0) // velocity components
+          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+            theta_j * 
+            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+      }      
     }
   }
 }
@@ -578,6 +590,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_boundary_fac
   }
 }
 
+
 // This is the implementation of the two helper function (defined here since
 // they are only used by EulerianSprayOperator methods)
 template <int dim, typename Number>
@@ -610,5 +623,3 @@ evaluate_function(const Function<dim> &                      function,
   }
   return result;
 }
-
-#endif
