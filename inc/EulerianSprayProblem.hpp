@@ -74,4 +74,6 @@ class EulerianSprayProblem{
     };
 };
 
+#include"EulerianSprayProblem_IMP.hpp"
+
 #endif

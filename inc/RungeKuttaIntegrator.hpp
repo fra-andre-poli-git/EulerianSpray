@@ -76,4 +76,6 @@ class SSPRungeKuttaIntegrator : public RungeKuttaIntegrator<VectorType,Operator,
     std::vector<double> factor;
     std::vector<double> ci;
 };
+
+#include"RungeKuttaIntegrator_IMP.hpp"
 #endif

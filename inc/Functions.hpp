@@ -81,4 +81,7 @@ class DirichletFunction : public Function<dim>
 //     virtual double value(const Point<dim> & p, const unsigned int component)
 //       const override;
 // };
+
+#include"Functions_IMP.hpp"
+
 #endif

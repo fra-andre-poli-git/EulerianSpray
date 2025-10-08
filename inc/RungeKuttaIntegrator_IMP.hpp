@@ -1,7 +1,5 @@
-#ifndef RUNGE_KUTTA_INTEGRATOR_IMP_H
-#define RUNGE_KUTTA_INTEGRATOR_IMP_H  
-#include"RungeKuttaIntegrator.hpp"
-#include"TypesDefinition.hpp"
+// This file contains the definitions of the method present in RungeKuttaIntegrator.hpp
+
 #include"EulerianSprayOperator.hpp"
 #include<deal.II/base/time_stepping.h>
 
@@ -187,5 +185,3 @@ SSPRungeKuttaIntegrator<VectorType,Operator, dim>::n_stages() const
 {
   return factor.size();
 }
-
-#endif

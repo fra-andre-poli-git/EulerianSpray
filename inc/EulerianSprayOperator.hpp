@@ -117,7 +117,6 @@ class EulerianSprayOperator{
       const SolutionType &src,
       const std::pair<unsigned int, unsigned int> & face_range) const;
 
-    void compute_shock_indicator(const SolutionType & cur_sol);
 };
 
 

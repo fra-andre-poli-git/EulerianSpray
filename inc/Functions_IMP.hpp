@@ -1,7 +1,3 @@
-#ifndef FUNCTIONS_IMP_HPP
-#define FUNCTIONS_IMP_HPP
-
-#include"Functions.hpp"
 #include"TypesDefinition.hpp"
 
 #include<deal.II/base/point.h>

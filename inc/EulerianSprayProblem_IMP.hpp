@@ -1,11 +1,6 @@
-#ifndef EULERIAN_SPRAY_OPERATOR_IMP_H
-#define EULERIAN_SPRAY_OPERATOR_IMP_H
-#include"EulerianSprayProblem.hpp"
 #include"TypesDefinition.hpp"
 #include"RungeKuttaIntegrator.hpp"
-#include"RungeKuttaIntegrator_IMP.hpp"
 #include"Functions.hpp"
-#include"Functions_IMP.hpp"
 #include"InlinedFunctions.hpp"
 #include"Parameters.hpp"
 
@@ -449,5 +444,3 @@ EulerianSprayProblem<dim, degree>::Postprocessor::get_needed_update_flags() cons
 {
   return update_values;
 }
-
-#endif
