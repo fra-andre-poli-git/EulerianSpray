@@ -412,7 +412,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       Number rho_min = std::numeric_limits<Number>::max();
       for(unsigned int q=0; q<n_q_points; ++q)
         rho_min = std::min(rho_min, density_values[q]);
-      Number theta = (cell_average_density - rho_min)/
+      Number theta = (cell_average_density - epsilon)/
         (cell_average_density - rho_min);
       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
       {
@@ -453,8 +453,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
         theta_j = std::min( theta_j, find_intersection_1d( state_q, mean_w,
           epsilon, min_velocity, max_velocity));
         Assert(theta_j >= 0.0 && theta_j <= 1.0,
-          ExcMessage("theta_j must be between 0 and 1"));
-
+          ExcMessage("theta_j = "+ std::to_string(theta_j) +
+          " must be between 0 and 1"));
       }
       if((1.0 - theta_j)> 1e-20) // If actually theta is less than 1 modify the
       // solution

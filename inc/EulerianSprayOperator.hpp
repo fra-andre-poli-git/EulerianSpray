@@ -67,6 +67,10 @@ class EulerianSprayOperator{
 
     void compute_velocity_extrema_1d(const SolutionType & solution);
 
+    Number get_max_velocity() const {return max_velocity;};
+
+    Number get_min_velocity() const {return min_velocity;};
+
   private:
     // MatrixFree<dim, Number> class collects all the data that is stored for
     // the matrix free implementation.

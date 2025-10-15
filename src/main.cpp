@@ -13,7 +13,7 @@
 // It must be 2, since the functions of the output are not meant to be used in
 // dimension 1.
 constexpr unsigned int dimension = 2;
-constexpr unsigned int finite_element_degree = 1;
+constexpr unsigned int finite_element_degree = 0;
 
 
 

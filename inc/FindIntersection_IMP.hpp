@@ -29,20 +29,41 @@ template<int dim> double find_intersection_1d(
 
   // If the solution is already in G_\epsilon theta is = 1
   if (!above && !below)
-    return theta;
+    return 1.0;
 
   Tensor<2, 2, Number> A;
-  Tensor<1, 2, Number> x;
-  Tensor<1, 2, Number> w_truncated;
+  Tensor<1, 2, Number> s;
+
 
   A[0][0] = w[0] - q[0];
   A[1][0] = w[1] - q[1];
-  A[1][0] = 1.0;
+  A[0][1] = 1.0;
   A[1][1] = above ? (b - epsilon) : (a + epsilon);
-  w_truncated[0] = w[0];  
-  w_truncated[1] = w[1];
-  x = invert(A) * w_truncated;
-  theta = x[0];
+
+
+  const Number detA = determinant(A);
+
+
+  if (std::abs(detA) < 1e-13)
+  {
+    std::cout<< "Warning: det(A) = " << detA << std::endl;
+    theta = 1;
+  }
+  else
+  { 
+    Tensor<1, 2, Number> q_truncated;
+    Tensor<1, 2, Number> w_truncated;
+    w_truncated[0] = w[0];  
+    w_truncated[1] = w[1];
+    q_truncated[0] = q[0];  
+    q_truncated[1] = q[1];
+    s = invert(A) * w_truncated;
+    Tensor<1, 2, Number> diff_ws = w_truncated - s;
+    Tensor<1, 2, Number> diff_wq = w_truncated - q_truncated;
+    if (diff_wq.norm() < 1e-14)
+      std::cout << "Warning: w ≈ q" << std::endl;
+    theta = diff_ws.norm() / diff_wq.norm();
+  }
 
   return theta;
 }

@@ -322,27 +322,35 @@ void EulerianSprayProblem<dim, degree>::run()
     || parameters.testcase==4)
   {
     for(const auto & cell : triangulation.active_cell_iterators())
+    {
+      const Point<dim> &v0 = cell->vertex(0);
+      const Point<dim> &v1 = cell->vertex(1);
+      const double hx = std::abs(v1(0) - v0(0)); 
       min_cell_measure =
-        std::min(min_cell_measure, cell->measure());
+        std::min(min_cell_measure, hx);
+    }
   }
   // Otherwise I will use the minimum distance between vertices
   else
   {
     for(const auto & cell : triangulation.active_cell_iterators())
       min_cell_measure =
-        std::min(min_cell_measure, cell->measure());
+        std::min(min_cell_measure, cell->diameter());
   }
   
   
   // with MPI here I have to make the minimum over all processors
   min_cell_measure =
     Utilities::MPI::min(min_cell_measure, MPI_COMM_WORLD);
+  // TODO: set the CFL according to the polynomial degree
   double CFL = 1./2;
   // Now I set the time step to be exactly the biggest to satisfy CFL condition
   //  time_step = CFL/
   //   Utilities::truncate_to_n_digits(
   //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
-  time_step = CFL*min_cell_measure / eulerian_spray_operator.compute_cell_transport_speed(solution);
+  time_step = CFL*min_cell_measure /
+    std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
+      std::abs(eulerian_spray_operator.get_min_velocity()));
   pcout << "Time step size: " << time_step
     << ", minimal h: " << min_cell_measure
     << std::endl
@@ -375,9 +383,9 @@ void EulerianSprayProblem<dim, degree>::run()
     //   output_results(
     //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
     output_results(timestep_number, false);
-    time_step = CFL/
-      Utilities::truncate_to_n_digits(
-        eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
+    // time_step = CFL/
+    //   Utilities::truncate_to_n_digits(
+    //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
     // time_step = CFL*min_cell_measure/ eulerian_spray_operator.compute_cell_transport_speed(solution);
     if((time + time_step) >= final_time)
         time_step = final_time - time;

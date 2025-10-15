@@ -1,8 +1,8 @@
 #Listing of parameteres
 
 subsection Problem parameters
-  set testcase = 3
-  set number of elements in x direction = 400 
+  set testcase = 2
+  set number of elements in x direction = 100 
   set final time = 0.5
   set snapshot instant = 0.00125
 end
@@ -25,5 +25,5 @@ subsection Operator parameters
 #  local_lax_friedrichs_modified
 #  harten_lax_vanleer
 #  godunov
-  set numerical flux type= local_lax_friedrichs
+  set numerical flux type = godunov
 end
