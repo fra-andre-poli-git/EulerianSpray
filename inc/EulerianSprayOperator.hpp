@@ -65,7 +65,7 @@ class EulerianSprayOperator{
       const MappingQ1<dim> & mapping,
       const FESystem<dim> & fe) const;
 
-    // void apply_WENO_limiter(SolutionType & solution) const;
+    void compute_velocity_extrema_1d(const SolutionType & solution);
 
   private:
     // MatrixFree<dim, Number> class collects all the data that is stored for
@@ -84,8 +84,9 @@ class EulerianSprayOperator{
 
     TimerOutput & timer;
 
-    // Vector<double> shock_indicator;
-    // Vector<double> jump_indicator;
+    // I store the maximum and the minimum of the initial velocity, to be used
+    // in the positivity limiter
+    Number max_velocity, min_velocity;
 
     NumericalFlux numerical_flux_type;
 

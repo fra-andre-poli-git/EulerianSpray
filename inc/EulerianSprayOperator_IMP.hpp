@@ -8,6 +8,7 @@
 #include<deal.II/matrix_free/fe_evaluation.h>
 #include<deal.II/matrix_free/operators.h>
 #include<deal.II/base/vectorization.h>
+#include <deal.II/base/quadrature_lib.h>
 
 #include<algorithm>
 #include<cmath>
@@ -277,23 +278,23 @@ EulerianSprayOperator<dim, degree, n_q_points_1d>::compute_cell_transport_speed(
     FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
 
     for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
-      {
+    {
         phi.reinit(cell);
         phi.gather_evaluate(solution, EvaluationFlags::values);
         VectorizedArray<Number> local_max = 0.;
         for (unsigned int q = 0; q < phi.n_q_points; ++q)
-          {
-            const auto solution = phi.get_value(q);
-            const auto velocity = eulerian_spray_velocity<dim>(solution);
-            const auto inverse_jacobian = phi.inverse_jacobian(q);
-            const auto convective_speed = inverse_jacobian * velocity;
-            VectorizedArray<Number> convective_limit = 0.;
-            for (unsigned int d = 0; d < dim; ++d)
-              convective_limit =
-                std::max(convective_limit, std::abs(convective_speed[d]));
-            local_max =
-              std::max(local_max, convective_limit);
-          }
+        {
+          const auto solution = phi.get_value(q);
+          const auto velocity = eulerian_spray_velocity<dim>(solution);
+          const auto inverse_jacobian = phi.inverse_jacobian(q);
+          const auto convective_speed = inverse_jacobian * velocity;
+          VectorizedArray<Number> convective_limit = 0.;
+          for (unsigned int d = 0; d < dim; ++d)
+            convective_limit =
+              std::max(convective_limit, std::abs(convective_speed[d]));
+          local_max =
+            std::max(local_max, convective_limit);
+        }
 
         for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell);
              ++v)
@@ -335,7 +336,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   //-------------------------Compute cell averages------------------------------
   std::vector< dealii::Vector<Number>> cell_averages;
   QGauss<dim>   quadrature_formula(
-    static_cast<unsigned int>std::ceil(fe.degree + 1)/.2);
+    static_cast<unsigned int>(std::ceil(fe.degree + 1)/.2));
   unsigned int n_q_points = quadrature_formula.size();
   FEValues<dim> fe_values (mapping,
     fe,
@@ -365,16 +366,20 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   //-------------------------Modify the solution--------------------------------
   // TODO: this implementation is only for 1D cases, extend it to general dim
   // Set up a small number
-  epsilon = 1e-13;
+  Number epsilon = 1e-13;
   // Set the quadrature points
   // For the moment I use a quadrature formula only for 1D in disguise
   // since I first test the limiter in 1D cases. TODO: extend it to 2D and
   // if possible to 3D eventually.
-  unsigned int N = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
-  QGauss<dim> quadrature_x (QGaussLobatto<1>(N), QGauss<1>(degree +1));
+  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  // In 1d in disguise case I could use L = 1, since the solution should depend
+  // only on x
+  unsigned int L = degree + 1;
+  // I use the brace initialization since the compiler complaints, using a
+  // function definition
+  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(L)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
   n_q_points = quadrature_x.size();
-  std::vector<Number> density_values(n_q_points);
   // Loop over cells
   cell = dof_handler.begin_active();
   std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
@@ -399,9 +404,12 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       // I use the projection inroduced by Yang, Wei, SHu, in [49]. 
       // In [42] are showed different chices for the projection
       fe_values_x.reinit(cell);
+      std::vector<Number> density_values(n_q_points);
+      const FEValuesExtractors::Scalar density  (0);
+      fe_values_x[density].get_function_values(solution, density_values);
+
       // Modify the density
       Number rho_min = std::numeric_limits<Number>::max();
-      fe_values_x[density].get_function_values(solution, density_values);
       for(unsigned int q=0; q<n_q_points; ++q)
         rho_min = std::min(rho_min, density_values[q]);
       Number theta = (cell_average_density - rho_min)/
@@ -414,27 +422,100 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
           theta * 
           (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
       }
-      double theta_j = 1.0;
+
       // Modify the velocity
-      for(/*every quadreture point in the cell*/){
-        // TODO: here I should modify this structure to work in 2D and 3D
-        // Find s, the intersection between q - \line{w} and \partial G_\epsilon
-        dealii::Tensor<1, dim> s;
-        // Compute theta^i_j = ||s - \line{w}||/||q - \line{w}||
-        // Compare theta^i_j with theta_j and set theta_j = min(theta_j, theta^i_j)
-      }
-      
-      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      double theta_j = 1.0;
+      dealii::Tensor<1, dim  + 1, Number> state_q, mean_w;
+      std::vector<dealii::Vector<Number>> solution_values(n_q_points,
+        Vector<Number>(dim + 1));
+      fe_values_x.get_function_values(solution, solution_values);
+
+      for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
       {
-        // Each DoF is associated to a different component of the system
-        unsigned int comp_i = fe.system_to_component_index(i).first;
-        if(comp_i > 0) // velocity components
-          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
-            theta_j * 
-            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
-      }      
+        // TODO: here I should add a check if the case is a 1d in disguise to
+        // choose the correct find theta to use
+
+        // Here I should find s, the intersection between q - \line{w} and
+        // \partial G_\epsilon and then compute
+        // theta^i_j = ||s - \line{w}||/||q - \line{w}||
+        // Actually what I do is to delegate the function find intersection to
+        // compute theta^i_j. This functions checks if the value of the function
+        // is in the region of admissibility G_\epsilon, and in that case
+        // returns 1.0
+
+        for(size_t n = 0; n < dim + 1; ++n)
+        {
+          state_q[n] = solution_values[x_i][n];
+          mean_w[n] = cell_averages[cell_no][n];
+        }
+        // Compare theta^i_j with theta_j and set 
+        // theta_j = min(theta_j, theta^i_j)
+        theta_j = std::min( theta_j, find_intersection_1d( state_q, mean_w,
+          epsilon, min_velocity, max_velocity));
+        Assert(theta_j >= 0.0 && theta_j <= 1.0,
+          ExcMessage("theta_j must be between 0 and 1"));
+
+      }
+      if((1.0 - theta_j)> 1e-20) // If actually theta is less than 1 modify the
+      // solution
+      {
+        for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+        {
+          // Each DoF is associated to a different component of the system
+          unsigned int comp_i = fe.system_to_component_index(i).first;
+          if(comp_i > 0) // Velocity momentum components
+            solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+              theta_j * 
+              (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+        }
+      } 
     }
   }
+}
+
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::
+  compute_velocity_extrema_1d(const SolutionType & solution)
+{
+  FEEvaluation<dim, degree, degree + 1, dim + 1, Number> phi(data, 0, 1);
+
+
+  Number max_velocity_u = std::numeric_limits<Number>::lowest();
+  Number min_velocity_u = std::numeric_limits<Number>::max();
+
+  for(unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
+  {
+    phi.reinit(cell);
+    phi.gather_evaluate(solution, EvaluationFlags::values);
+    dealii::VectorizedArray<Number> local_max =
+      - std::numeric_limits<Number>::max();
+    dealii::VectorizedArray<Number> local_min =
+      std::numeric_limits<Number>::max();
+    for(unsigned int q = 0; q <  phi.n_q_points; ++q)
+    {
+      const auto solution = phi.get_value(q);
+      const auto velocity = eulerian_spray_velocity<dim>(solution);
+      const auto inverse_jacobian = phi.inverse_jacobian(q);
+      const auto convective_speed = inverse_jacobian * velocity;
+      const auto u = convective_speed[0];
+
+      local_max = std::max(local_max, u);
+      local_min = std::min(local_min, u);
+    }
+
+    for(unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell); ++v)
+    {
+      max_velocity_u = std::max(max_velocity_u, local_max[v]);
+      min_velocity_u = std::min(min_velocity_u, local_min[v]);
+    }
+  }
+
+  max_velocity_u = Utilities::MPI::max(max_velocity_u, MPI_COMM_WORLD);
+  min_velocity_u = Utilities::MPI::min(min_velocity_u, MPI_COMM_WORLD);
+
+  max_velocity = max_velocity_u;
+  min_velocity = min_velocity_u;
+
 }
 
 template<int dim, int degree, int n_q_points_1d>

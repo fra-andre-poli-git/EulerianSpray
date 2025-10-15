@@ -92,54 +92,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
     }
     case godunov:
     {
-      // // Taken from Bouchout Jin Li
-      // const Number density_minus = w_minus[0];
-      // const Number density_plus = w_plus[0];
-      // const Number rho_m_sqrt = std::sqrt(density_minus);
-      // const Number rho_p_sqrt = std::sqrt(density_plus);
-      // const Number u_delta = ((rho_m_sqrt * (velocity_minus * normal) +
-      //   rho_p_sqrt * (velocity_plus * normal))/(rho_m_sqrt + rho_p_sqrt));
-
-      // // Now, one may think, like me, that u_delta is a Number, therefore a
-      // // double. Well, THEY ARE WRONG, because, thanks to the macro 
-      // // DEAL_II_ALWAYS_INLINE, it is a dealii::VectorizedArray<double, 2>
-      // // Vectorization should speed up the performance, so I will keep it,
-      // // therefore now I have to deal with it
-
-      // Tensor<1, dim + 1, Number> flux;
-
-      // unsigned int vectorization_dimension = u_delta.size();
-
-      // for(unsigned int v=0; v<vectorization_dimension; ++v)
-      // {
-      //   if(u_delta[v]>1e-16)
-      //   {//flux_minus*normal
-      //     auto normal_flux = flux_minus*normal;
-      //     for(unsigned int d=0; d<dim+1; ++d)
-      //     {
-      //       flux[d][v]=normal_flux[d][v];
-      //     }
-      //   }
-      //   else if(-u_delta[v]>1e-16)
-      //   {//flux_plus*normal
-      //     auto normal_flux = flux_plus*normal;
-      //     for(unsigned int d=0; d<dim+1; ++d)
-      //     {
-      //       flux[d][v]=normal_flux[d][v];
-      //     }
-      //   }
-      //   else
-      //   {//0.5*(flux_plus * normal + flux_minus * normal)
-      //     auto normal_flux = 0.5*(flux_plus * normal + flux_minus * normal);
-      //     for(unsigned int d=0; d<dim+1; ++d)
-      //     {
-      //       flux[d][v]=normal_flux[d][v];
-      //     }
-      //   }
-      // }
-      // return flux;
-
-      // Taken from Yang, Wei, Shu, 2013
+      // Taken from Yang, Wei, Shu, 2013 and Bouchou, Jin, Li, ????
       const Number density_minus = w_minus[0];
       const Number density_plus = w_plus[0];
 
@@ -152,8 +105,10 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, Number> & w_minus,
       // Vectorization should speed up the performance, so I will keep it,
       // therefore now I have to deal with it
 
-      unsigned int vectorization_dimension = normal_velocity_minus.size();
+      // unsigned int vectorization_dimension = normal_velocity_minus.size();
       
+      constexpr unsigned int vectorization_dimension = VectorizedArray<Number>::size();
+
       Tensor<1, dim + 1, Number> flux;
     
       for(unsigned int v=0; v<vectorization_dimension; ++v)

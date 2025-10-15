@@ -5,17 +5,20 @@
 #ifndef FIND_INTERSECTION_HPP
 #define FIND_INTERSECTION_HPP
 
-template<int dim> dealii::Vector<dim> find_intersection_1d(
-  dealii::Vector<dim> q,
-  dealii::Vector<dim> w,
-  double epsilon
-  double a,
-  double b);
+#include"TypesDefinition.hpp"
 
-template<int dim> dealii::Vector<dim> find_intersection(
-  dealii::Vector<dim> q,
-  dealii::Vector<dim> w,
-  double epsilon
+
+template<int dim> double find_intersection_1d(
+  const dealii::Tensor<1, dim, Number> & q,
+  const dealii::Tensor<1, dim, Number> & w,
+  const Number & epsilon,
+  const Number & a,
+  const Number & b);
+
+template<int dim> double find_intersection(
+  dealii::Tensor<1, dim, Number>  q,
+  dealii::Tensor<1, dim, Number>  w,
+  double epsilon,
   double s);
   
 #include "FindIntersection_IMP.hpp"

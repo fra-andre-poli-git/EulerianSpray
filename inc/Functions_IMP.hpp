@@ -206,5 +206,3 @@ double DirichletFunction<dim>::value(const Point<dim> & p,
 //   }
 // }
 
-
-#endif

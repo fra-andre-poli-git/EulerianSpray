@@ -308,8 +308,10 @@ void EulerianSprayProblem<dim, degree>::run()
   rk_register1.reinit(solution);
   rk_register2.reinit(solution);
 
-  // Here I initialize the solution with the initial data
+  // Here I initialize the solution with the initial data and I compute its
+  // extrema to be used in the limiting phase
   eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
+  eulerian_spray_operator.compute_velocity_extrema_1d(solution);
 
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
