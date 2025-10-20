@@ -81,7 +81,7 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     vec_ri,
     solution,
     vec_ri);
-  pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+  //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
@@ -94,7 +94,7 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         vec_ki,
         solution,
         vec_ri);
-      pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+      //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
     }
 }
 
@@ -174,7 +174,7 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     solution *= factor[stage];
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
-    // Flux limiter
+    // Solution limiter
     pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   }
 }

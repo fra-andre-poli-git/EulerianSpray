@@ -13,9 +13,11 @@ double InitialSolution<dim>::value(const Point<dim> & p,
     {
       double sigma = 0.1;
       if(component == 0)
-        return 1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
+        //return 1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
+        return sin(p[0]) + 2;
       if(component == 1)
-        return -1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
+        //return -1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
+        return sin(p[0]) + 2;
       return 0.;
     }
     case 2:
@@ -25,9 +27,6 @@ double InitialSolution<dim>::value(const Point<dim> & p,
       if(component==1)
         return 0.5*(-0.5*(p[0]<-0.5) + 0.4*(-0.5<=p[0] && p[0]<0) + (0.4-p[0])*
           (0<=p[0] && p[0] <0.8) + -0.4*(p[0]>=0.8));
-      // Testcase 1 the dimension is supposed to be 1. However, since output
-      // functions are expected to work in dimension bigger than 1, I put this
-      // return to make y momentum null.
       return 0.; 
     }
     case 3:
@@ -62,6 +61,7 @@ double FinalSolution<dim>::value(const Point<dim> & p,
 {
   switch(parameters.testcase)
   {
+    
     case 2:
     {
       if(component == 0)

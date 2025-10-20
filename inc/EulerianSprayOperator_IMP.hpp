@@ -335,8 +335,11 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
 
   //-------------------------Compute cell averages------------------------------
   std::vector< dealii::Vector<Number>> cell_averages;
-  QGauss<dim>   quadrature_formula(
-    static_cast<unsigned int>(std::ceil(fe.degree + 1)/.2));
+  cell_averages.assign(dof_handler.get_triangulation().n_active_cells(),
+    dealii::Vector<Number>(dim+1));
+  // QGauss<dim>   quadrature_formula(
+  //   static_cast<unsigned int>(std::ceil((fe.degree + 1)/2.)));
+  QGauss<dim>   quadrature_formula(fe.degree+1);
   unsigned int n_q_points = quadrature_formula.size();
   FEValues<dim> fe_values (mapping,
     fe,
@@ -348,19 +351,29 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
     endc = dof_handler.end();
+  // TODO: this loop may not be very efficient since I do not access cell_averages
+  // sequentially
   for(; cell!=endc; ++cell)
   {
     // Compute cell average
     unsigned int cell_no = cell->active_cell_index();
     fe_values.reinit(cell);
     fe_values.get_function_values(solution, local_solution_values);
-    cell_averages.push_back(dealii::Vector<Number>(dim+1));
     for(unsigned int q=0; q<n_q_points; ++q)
       for(unsigned int d=0; d<dim+1; ++d)
         cell_averages[cell_no][d] += local_solution_values[q][d]*
           fe_values.JxW(q);
     for(unsigned int d=0; d<dim+1; ++d)
+    {
       cell_averages[cell_no][d] /= cell->measure(); 
+      if(d == 0)
+        Assert(cell_averages[cell_no][d] >= 0.0,
+          ExcMessage("Error: average density is negative"));
+      if(d == 1)
+        Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) ||
+          (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
+          ExcMessage("Error: velocity exceeds realizability bounds"));
+    }
   }
 
   //-------------------------Modify the solution--------------------------------
@@ -377,7 +390,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   unsigned int L = degree + 1;
   // I use the brace initialization since the compiler complaints, using a
   // function definition
-  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(L)};
+  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
   n_q_points = quadrature_x.size();
   // Loop over cells
@@ -396,7 +409,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
+        if(comp_i < 2) 
+          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
       }
     }
     else
@@ -408,21 +422,28 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       const FEValuesExtractors::Scalar density  (0);
       fe_values_x[density].get_function_values(solution, density_values);
 
-      // Modify the density
+      // Modify the density 
       Number rho_min = std::numeric_limits<Number>::max();
       for(unsigned int q=0; q<n_q_points; ++q)
         rho_min = std::min(rho_min, density_values[q]);
-      Number theta = (cell_average_density - epsilon)/
-        (cell_average_density - rho_min);
-      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      if(rho_min < epsilon)
       {
-        // Each DoF is associated to a different component of the system
-        unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
-          theta * 
-          (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+        Number diff_den = std::abs(cell_average_density - rho_min);
+        Number diff_num = std::abs(cell_average_density - epsilon);
+        Number theta = diff_num / diff_den;
+        Assert(theta >= 0.0 && theta <= 1.0,
+          ExcMessage("theta = "+ std::to_string(theta) +
+          " must be between 0 and 1"));
+        for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+        {
+          // Each DoF is associated to a different component of the system
+          unsigned int comp_i = fe.system_to_component_index(i).first;
+          if(comp_i == 0)
+            solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+              theta * 
+              (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+        }
       }
-
       // Modify the velocity
       double theta_j = 1.0;
       dealii::Tensor<1, dim  + 1, Number> state_q, mean_w;
@@ -463,7 +484,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
         {
           // Each DoF is associated to a different component of the system
           unsigned int comp_i = fe.system_to_component_index(i).first;
-          if(comp_i > 0) // Velocity momentum components
+          if(comp_i == 1) // I modify only x velocity
             solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
               theta_j * 
               (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);

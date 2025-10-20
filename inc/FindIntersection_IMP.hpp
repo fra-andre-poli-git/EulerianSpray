@@ -20,7 +20,6 @@ template<int dim> double find_intersection_1d(
   const Number & a,
   const Number & b)
 {
-  double theta = 1.0;
 
   // True if I am above the line rho * (b - \epsilon)
   bool above = (q[1] > q[0] * (b - epsilon));
@@ -31,41 +30,55 @@ template<int dim> double find_intersection_1d(
   if (!above && !below)
     return 1.0;
 
-  Tensor<2, 2, Number> A;
-  Tensor<1, 2, Number> s;
+  double y_edge = above ? (b-epsilon) : (a+epsilon);
 
+  auto f = [&](double t)->double {
+    const Number rho = w[0] + t*(q[0] - w[0]);
+    const Number m   = w[1] + t*(q[1] - w[1]);
+    return static_cast<double>(m - rho * y_edge);
+  };
 
-  A[0][0] = w[0] - q[0];
-  A[1][0] = w[1] - q[1];
-  A[0][1] = 1.0;
-  A[1][1] = above ? (b - epsilon) : (a + epsilon);
+  double t0 = 0.0, t1 = 1.0;
+  double f0 = f(t0), f1 = f(t1); 
 
-
-  const Number detA = determinant(A);
-
-
-  if (std::abs(detA) < 1e-13)
+  const int max_it = 50;
+  const double tol = 1e-12;
+  double t = 0.5;
+  if(f0 * f1 >0)
   {
-    std::cout<< "Warning: det(A) = " << detA << std::endl;
-    theta = 1;
+    t = 1.0;
   }
-  else
-  { 
-    Tensor<1, 2, Number> q_truncated;
-    Tensor<1, 2, Number> w_truncated;
-    w_truncated[0] = w[0];  
-    w_truncated[1] = w[1];
-    q_truncated[0] = q[0];  
-    q_truncated[1] = q[1];
-    s = invert(A) * w_truncated;
-    Tensor<1, 2, Number> diff_ws = w_truncated - s;
-    Tensor<1, 2, Number> diff_wq = w_truncated - q_truncated;
-    if (diff_wq.norm() < 1e-14)
-      std::cout << "Warning: w ≈ q" << std::endl;
-    theta = diff_ws.norm() / diff_wq.norm();
+  else // therefore (f0 * f1 <= 0.0) 
+  {
+    for (int it=0; it<max_it; ++it)
+    {
+      double tm = 0.5*(t0 + t1);
+      double fm = f(tm);
+      if (!std::isfinite(fm))
+      {
+        t = 0.5;
+        break;
+      }
+      if ((t1 - t0)*0.5 < tol || std::abs(fm) < 1e-14)
+      {
+        t = tm;
+        break;
+      }
+      if(f0 * fm <= 0.0)
+      {
+        t1 = tm;
+        f1 = fm;
+      }
+      else
+      {
+        t0 = tm;
+        f0 = fm;
+      }
+      t = tm;
+    }
   }
 
-  return theta;
+  return t;
 }
 
 template<int dim> double find_intersection(

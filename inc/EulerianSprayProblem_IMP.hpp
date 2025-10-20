@@ -13,6 +13,7 @@
 #include<deal.II/numerics/vector_tools.h>
 #include<deal.II/numerics/data_out.h>
 
+
 #include<memory>
 #include<iostream>
 
@@ -35,7 +36,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
   switch(parameters.testcase)
   {
-    // Accuracy
+    // Accuracy (Example 3 from [49])
     case 1:{
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction, parameters.n_el_x_direction /10},
@@ -69,7 +70,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       triangulation.add_periodicity(periodicity_vector);
       break;
     }
-    // Vacuum
+    // Vacuum 1D
     case 2:
     {
       // Note the fact that last argument is true, therefore we get different
@@ -107,7 +108,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    // Moving delta-shock
+    // Moving delta-shock 1D
     case 3:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
@@ -337,20 +338,25 @@ void EulerianSprayProblem<dim, degree>::run()
       min_cell_measure =
         std::min(min_cell_measure, cell->diameter());
   }
-  
-  
   // with MPI here I have to make the minimum over all processors
   min_cell_measure =
     Utilities::MPI::min(min_cell_measure, MPI_COMM_WORLD);
-  // TODO: set the CFL according to the polynomial degree
-  double CFL = 1./2;
-  // Now I set the time step to be exactly the biggest to satisfy CFL condition
+  
+  
+  // In this block I set the time step to comply with CFL condition
+  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  QGaussLobatto<1> qgl (M);
+  const auto &weights = qgl.get_weights(); 
+  double CFL = weights[0];
+  time_step = CFL*min_cell_measure /
+    std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
+    std::abs(eulerian_spray_operator.get_min_velocity()));
+  //double CFL = 1./2.;
+  // // Now I set the time step to be exactly the biggest to satisfy CFL condition
   //  time_step = CFL/
   //   Utilities::truncate_to_n_digits(
   //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
-  time_step = CFL*min_cell_measure /
-    std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
-      std::abs(eulerian_spray_operator.get_min_velocity()));
+
   pcout << "Time step size: " << time_step
     << ", minimal h: " << min_cell_measure
     << std::endl
@@ -382,7 +388,7 @@ void EulerianSprayProblem<dim, degree>::run()
     //         time >= final_time - 1e-12)
     //   output_results(
     //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
-    output_results(timestep_number, false);
+    // output_results(timestep_number, false);
     // time_step = CFL/
     //   Utilities::truncate_to_n_digits(
     //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
