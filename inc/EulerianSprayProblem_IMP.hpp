@@ -36,7 +36,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
   switch(parameters.testcase)
   {
-    // Accuracy (Example 3 from [49])
+    // Accuracy 1D(Example 3 from [49])
     case 1:{
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction, parameters.n_el_x_direction /10},
@@ -68,6 +68,8 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
         0,
         periodicity_vector);
       triangulation.add_periodicity(periodicity_vector);
+
+      final_time = 0.1;
       break;
     }
     // Vacuum 1D
@@ -105,7 +107,9 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
-      final_time = parameters.final_time;
+
+      // final_time = parameters.final_time;
+      final_time = 0.5;
       break;
     }
     // Moving delta-shock 1D
@@ -131,9 +135,9 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    // Stationary delta-shock
+    // 
     case 4:{}
-    // 2d collapse
+    // 
     case 5:
     {
       GridGenerator::subdivided_hyper_cube(triangulation,
@@ -153,7 +157,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
     case 6:{}
     // 2d stationary delta-shock
     case 7:
-    // Taylor vortices
+    // Taylor-Green vortices
     case 8:
     {
       GridGenerator::hyper_cube(triangulation, 0, 1, true);
@@ -369,35 +373,42 @@ void EulerianSprayProblem<dim, degree>::run()
   while(time < final_time - 1e-12)
   {
     ++timestep_number;
+
     // Here the integration in time is performed by the integrator
-    {
-      integrator->perform_time_step(eulerian_spray_operator,
-        time,
-        time_step,
-        solution,
-        rk_register1,
-        rk_register2,
-        dof_handler,
-        mapping,
-        fe);
-    }
+    integrator->perform_time_step(eulerian_spray_operator,
+      time,
+      time_step,
+      solution,
+      rk_register1,
+      rk_register2,
+      dof_handler,
+      mapping,
+      fe);
+  
+
     pcout<<"Performed time step at time: "<<time<<
       ", time step number: "<< timestep_number<<std::endl;
+    
     // if (static_cast<int>(time / parameters.snapshot) !=
     //           static_cast<int>((time - time_step) / parameters.snapshot) ||
     //         time >= final_time - 1e-12)
     //   output_results(
     //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
-    // output_results(timestep_number, false);
+    output_results(timestep_number, false);
+
+    // Now if I want a different time step I compute the new onw
     // time_step = CFL/
     //   Utilities::truncate_to_n_digits(
     //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
     // time_step = CFL*min_cell_measure/ eulerian_spray_operator.compute_cell_transport_speed(solution);
+    // if the new time step exceeds the final time i cut it
     if((time + time_step) >= final_time)
         time_step = final_time - time;
     pcout<<"New time step: "<<time_step<<std::endl;
     time += time_step; 
   }
+
+  // A final output
   output_results(timestep_number, true);
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;

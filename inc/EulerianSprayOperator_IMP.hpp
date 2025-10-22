@@ -370,9 +370,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
         Assert(cell_averages[cell_no][d] >= 0.0,
           ExcMessage("Error: average density is negative"));
       if(d == 1)
-        Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) ||
+        Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
           (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
-          ExcMessage("Error: velocity exceeds realizability bounds"));
+          ExcMessage("Error: average velocity exceeds realizability bounds"));
     }
   }
 
@@ -430,7 +430,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       {
         Number diff_den = std::abs(cell_average_density - rho_min);
         Number diff_num = std::abs(cell_average_density - epsilon);
-        Number theta = diff_num / diff_den;
+        Number theta = 1.0;
+        if (diff_den <1e-14)
+          theta = diff_num / diff_den;
         Assert(theta >= 0.0 && theta <= 1.0,
           ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
@@ -477,18 +479,15 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
           ExcMessage("theta_j = "+ std::to_string(theta_j) +
           " must be between 0 and 1"));
       }
-      if((1.0 - theta_j)> 1e-20) // If actually theta is less than 1 modify the
-      // solution
+
+      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
       {
-        for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
-        {
-          // Each DoF is associated to a different component of the system
-          unsigned int comp_i = fe.system_to_component_index(i).first;
-          if(comp_i == 1) // I modify only x velocity
-            solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
-              theta_j * 
-              (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
-        }
+        // Each DoF is associated to a different component of the system
+        unsigned int comp_i = fe.system_to_component_index(i).first;
+        if(comp_i < 2) // I modify density and x momentum
+          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+            theta_j * 
+            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
       } 
     }
   }

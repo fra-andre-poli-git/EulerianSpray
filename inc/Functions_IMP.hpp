@@ -32,19 +32,22 @@ double InitialSolution<dim>::value(const Point<dim> & p,
     case 3:
     {
       if(component==0)
-        return (p[0]<0.)*1 + (p[0]>=0.)*0.25;
+        return 1 * (p[0]<0.)
+          + 0.25 * (p[0]>=0.);
       if(component==1)
-        return (p[0]<0.)*1*0.5 + (p[0]>=0.)*0.25*(-0.4);
+        return 1 * 0.5 * (p[0]<0.)
+          +  0.25 * 0 * (-0.4) * (p[0]>=0.);
       return 0.;
     }
     case 5:
     {
       if(component==0)
         return 0.9*(((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) ||
-          ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15))) + 0.1;
+          ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15)))
+          + 0.1;
       if(component==1)
-        return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) +
-          -0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
+        return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) 
+          - 0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
       return 0.;
     }
     default:
@@ -61,17 +64,23 @@ double FinalSolution<dim>::value(const Point<dim> & p,
 {
   switch(parameters.testcase)
   {
-    
+    case 1:
+
+        
     case 2:
     {
       if(component == 0)
-        return 0.5*(p[0]< -0.75) + 0*(p[0]>= -0.75)*(p[0]< -0.3) 
-          + 0.5 * (p[0]>= -0.3 )*(p[0]<0.2) + 1 * (p[0]>=0.2) * (p[0]<0.6)
+        return 0.5 * (p[0]< -0.75) 
+          + 0 * (p[0]>= -0.75) * (p[0]< -0.3) 
+          + 0.5 * (p[0]>= -0.3 ) * (p[0]<0.2)
+          + 1 * (p[0]>=0.2) * (p[0]<0.6)
           + 0.5 * (p[0]>= 0.6 );
       if(component == 1)
-        return 0.5*(-0.5)*(p[0]< -0.75) + 0 * (p[0]>= -0.75)*(p[0]< -0.3) 
-          + 0.5 * 0.4 *(p[0]>= -0.3 )*(p[0]<0.2) + 1 * (0.4 - p[0]) / 0.5 
-          * (p[0]>=0.2) * (p[0]<0.6) + 0.5 * (-0.4) * (p[0]>= 0.6 );
+        return 0.5*(-0.5)*(p[0]< -0.75)
+          + 0 * (p[0]>= -0.75)*(p[0]< -0.3) 
+          + 0.5 * 0.4 *(p[0]>= -0.3 )*(p[0]<0.2)
+          + 1 * (0.4 - p[0]) / 0.5 * (p[0]>=0.2) * (p[0]<0.6)
+          + 0.5 * (-0.4) * (p[0]>= 0.6 );
       return 0.;
     }
     case 3:
@@ -101,12 +110,16 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p,
     case 2:
     {
       if(component == 0)
-        return 0.5*(p[0]< -0.75) + 0*(p[0]>= -0.75)*(p[0]< -0.3) 
-          + 0.5 * (p[0]>= -0.3 )*(p[0]<0.2) + 1 * (p[0]>=0.2) * (p[0]<0.6)
+        return 0.5*(p[0]< -0.75) 
+          + 0 * (p[0]>= -0.75) * (p[0]< -0.3) 
+          + 0.5 * (p[0]>= -0.3) * (p[0]<0.2) 
+          + 1 * (p[0]>=0.2) * (p[0]<0.6)
           + 0.5 * (p[0]>= 0.6 );
       if(component == 1)
-        return -0.5 * (p[0]<-0.5) + 0.4*(p[0]>=-0.5)*(p[0]<0.2) + (0.8-2*p[0]) * 
-          (p[0]>=0.2)*(p[0]<0.6) - 0.4 * (p[0]>= 0.6);
+        return -0.5 * (p[0]<-0.5)
+          + 0.4*(p[0]>=-0.5)*(p[0]<0.2)
+          + (0.8-2*p[0]) * (p[0]>=0.2)*(p[0]<0.6)
+          - 0.4 * (p[0]>= 0.6);
       return 0.;
     }
     case 3:
@@ -162,26 +175,54 @@ double DirichletFunction<dim>::value(const Point<dim> & p,
   }
 }
 
-// template<int dim>
-// double ExactSolution<dim>::value(const Point<dim> & p,
-//   const unsigned int component) const
-// {
-//   const double t = this->get_time();
+template<int dim>
+double ExactSolution<dim>::value(const Point<dim> & p,
+  const unsigned int component) const
+{
+  const double t = this->get_time();
 
-//   switch(parameters.testcase)
-//   {
-//     case 2:
-//     {
-//       if(component==0)
-//         return 0.;
-//       if(component==1)
-//       if(component==2)
-//       return 0.;
-//     }
-//     default:
-//       Assert(false, ExcNotImplemented());
-//   }
-// }
+  switch(parameters.testcase)
+  {
+    case 1:
+    {
+      // Solve the implicit equation x_0 + t u_0(x_0) = x
+      // where u_0(x) = sin(x) + 2
+      double x_0;
+
+      if(component == 0)
+        return (sin(x_0) + 2)/(1 + cos(x_0));
+      if(component == 1)
+        return (sin(x_0) + 2) * (sin(x_0) + 2)/(1 + cos(x_0));
+      if(component == 2)
+        return 0.;
+    }
+    case 2:
+    {
+      if (component == 0) // rho(x,t)
+        return 0.5 * (p[0] < -0.5 - 0.5*t)
+          + 0.0 * (p[0] >= -0.5 - 0.5*t) * (p[0] < -0.5 + 0.4*t)
+          + 0.5 * (p[0] >= -0.5 + 0.4*t) * (p[0] < 0.4*t)
+          + (0.5 / (1.0 - t)) * (p[0] >= 0.4*t) * (p[0] < 0.8 - 0.4*t)
+          + 0.5 * (p[0] >= 0.8 - 0.4*t);
+
+      if (component == 1) // rho(x,t) * u(x,t)
+        return 0.5 *( -0.5) * (p[0] < -0.5 - 0.5*t)
+          + 0.0 * (p[0] >= -0.5 - 0.5*t) * (p[0] < -0.5 + 0.4*t)
+          + 0.5 * 0.4 * (p[0] >= -0.5 + 0.4*t) * (p[0] < 0.4*t)
+          + (0.5 / (1.0 - t)) * ((0.4 - p[0]) / (1.0 - t)) * (p[0] >= 0.4*t) * (p[0] < 0.8 - 0.4*t)
+          - 0.5 * 0.4 * (p[0] >= 0.8 - 0.4*t);
+
+      return 0.;
+
+    }
+    case 3:
+    {
+
+    }
+    default:
+      Assert(false, ExcNotImplemented());
+  }
+}
 
 
 // template<int dim>
