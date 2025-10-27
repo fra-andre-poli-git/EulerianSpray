@@ -81,7 +81,10 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     vec_ri,
     solution,
     vec_ri);
-  //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+    //if(pde_operator.get_1d_in_disguise())
+      pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
+    //else
+      //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
@@ -94,7 +97,10 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         vec_ki,
         solution,
         vec_ri);
-      //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+      //if(pde_operator.get_1d_in_disguise())
+        pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
+      //else
+        //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
     }
 }
 
@@ -166,16 +172,19 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   copy_solution.reinit(solution);
   copy_solution=solution;
   vec_ki.reinit(solution);
-
   unsigned int n_stages = factor.size();
   for(unsigned int stage = 0; stage<n_stages; ++stage)
   {
+    // Compute L(u)
     pde_operator.apply(current_time + ci[stage]*time_step, solution, vec_ki);
     solution *= factor[stage];
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
     // Solution limiter
-    pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+    if(pde_operator.get_1d_in_disguise())
+      pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
+    // else
+      // pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
   }
 }
 
