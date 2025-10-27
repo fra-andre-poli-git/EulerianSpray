@@ -60,7 +60,7 @@ class EulerianSprayOperator{
 
     void set_numerical_flux(const NumericalFlux &);
 
-    void apply_positivity_limiter(SolutionType & solution,
+    void apply_positivity_limiter_1d(SolutionType & solution,
       const DoFHandler<dim> & dof_handler,
       const MappingQ1<dim> & mapping,
       const FESystem<dim> & fe) const;
@@ -70,6 +70,10 @@ class EulerianSprayOperator{
     Number get_max_velocity() const {return max_velocity;};
 
     Number get_min_velocity() const {return min_velocity;};
+      
+    void set_1d_in_disguise(){one_dimensional_in_disguise = true;};
+
+    bool get_1d_in_disguise() const {return one_dimensional_in_disguise;};
 
   private:
     // MatrixFree<dim, Number> class collects all the data that is stored for
@@ -91,6 +95,8 @@ class EulerianSprayOperator{
     // I store the maximum and the minimum of the initial velocity, to be used
     // in the positivity limiter
     Number max_velocity, min_velocity;
+
+    bool one_dimensional_in_disguise = false;
 
     NumericalFlux numerical_flux_type;
 

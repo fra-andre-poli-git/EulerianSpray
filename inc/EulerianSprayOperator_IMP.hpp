@@ -326,7 +326,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
 // pressureless gas dynamics system of equations.
 // This implementation is tied to Lagrange basis functions on quadrilaterals
 template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter(
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter_1d(
   SolutionType & solution,
   const DoFHandler<dim> & dof_handler,
   const MappingQ1<dim> & mapping,
@@ -391,7 +391,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
   // I use the brace initialization since the compiler complaints, using a
   // function definition
   Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
+  // Quadrature<dim> quadrature_y { QGauss<1>(L), QGaussLobatto<1>(M)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
+  // FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
   n_q_points = quadrature_x.size();
   // Loop over cells
   cell = dof_handler.begin_active();
@@ -401,7 +403,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
     unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
     Number cell_average_density = cell_averages[cell_no][0];
-    if(cell_average_density < epsilon)
+    if(cell_average_density <= epsilon)
     {
       // Set the mean value as solution
       // Loop over DoFs
@@ -409,30 +411,36 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        if(comp_i < 2) 
-          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
+        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
       }
     }
     else
     {
-      // I use the projection inroduced by Yang, Wei, SHu, in [49]. 
+      // I use the projection inroduced by Yang, Wei, Shu, in [49]. 
       // In [42] are showed different chices for the projection
-      fe_values_x.reinit(cell);
-      std::vector<Number> density_values(n_q_points);
-      const FEValuesExtractors::Scalar density  (0);
-      fe_values_x[density].get_function_values(solution, density_values);
 
-      // Modify the density 
+
+      // Modify the density
+      fe_values_x.reinit(cell);
+      // fe_values_y.reinit(cell); 
+      std::vector<Number> density_values(n_q_points);
+      const FEValuesExtractors::Scalar density(0);
       Number rho_min = std::numeric_limits<Number>::max();
+
+      fe_values_x[density].get_function_values(solution, density_values);
       for(unsigned int q=0; q<n_q_points; ++q)
         rho_min = std::min(rho_min, density_values[q]);
+      // fe_values_y[density].get_function_values(solution, density_values);
+      // for(unsigned int q=0; q<n_q_points; ++q)
+      //   rho_min = std::min(rho_min, density_values[q]);
       if(rho_min < epsilon)
-      {
-        Number diff_den = std::abs(cell_average_density - rho_min);
+      {        
         Number diff_num = std::abs(cell_average_density - epsilon);
+        Number diff_den = std::abs(cell_average_density - rho_min);
         Number theta = 1.0;
-        if (diff_den <1e-14)
-          theta = diff_num / diff_den;
+        if(diff_den < 1e-12)
+          std::cout<<"Warning in density modification: you are dividing for a small number"<<std::endl;
+        theta = diff_num / diff_den;
         Assert(theta >= 0.0 && theta <= 1.0,
           ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
@@ -440,32 +448,26 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
         {
           // Each DoF is associated to a different component of the system
           unsigned int comp_i = fe.system_to_component_index(i).first;
-          if(comp_i == 0)
-            solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
-              theta * 
-              (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+          // if(comp_i == 0)
+          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+            theta * 
+            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+
         }
       }
+      
       // Modify the velocity
       double theta_j = 1.0;
       dealii::Tensor<1, dim  + 1, Number> state_q, mean_w;
       std::vector<dealii::Vector<Number>> solution_values(n_q_points,
         Vector<Number>(dim + 1));
-      fe_values_x.get_function_values(solution, solution_values);
 
+      
+      fe_values_x.get_function_values(solution, solution_values);
       for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
       {
-        // TODO: here I should add a check if the case is a 1d in disguise to
-        // choose the correct find theta to use
-
-        // Here I should find s, the intersection between q - \line{w} and
-        // \partial G_\epsilon and then compute
-        // theta^i_j = ||s - \line{w}||/||q - \line{w}||
-        // Actually what I do is to delegate the function find intersection to
-        // compute theta^i_j. This functions checks if the value of the function
-        // is in the region of admissibility G_\epsilon, and in that case
-        // returns 1.0
-
+        // Here I find s, the intersection between q - \line{w} and
+        // \partial G_\epsilon and then 
         for(size_t n = 0; n < dim + 1; ++n)
         {
           state_q[n] = solution_values[x_i][n];
@@ -473,21 +475,45 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply_positivity_limiter
         }
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)
-        theta_j = std::min( theta_j, find_intersection_1d( state_q, mean_w,
-          epsilon, min_velocity, max_velocity));
+        auto s = find_intersection_1d( state_q, mean_w,
+          epsilon, min_velocity, max_velocity);
+        // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
+        Number theta_i_j = (mean_w - s).norm() / (mean_w - state_q).norm();
+        theta_j = std::min( theta_j, theta_i_j);
         Assert(theta_j >= 0.0 && theta_j <= 1.0,
           ExcMessage("theta_j = "+ std::to_string(theta_j) +
           " must be between 0 and 1"));
       }
 
+      // fe_values_y.get_function_values(solution, solution_values);
+      // for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
+      // {
+      //   // Here I find s, the intersection between q - \line{w} and
+      //   // \partial G_\epsilon and then 
+      //   for(size_t n = 0; n < dim + 1; ++n)
+      //   {
+      //     state_q[n] = solution_values[x_i][n];
+      //     mean_w[n] = cell_averages[cell_no][n];
+      //   }
+      //   // Compare theta^i_j with theta_j and set 
+      //   // theta_j = min(theta_j, theta^i_j)
+      //   auto s = find_intersection_1d( state_q, mean_w,
+      //     epsilon, min_velocity, max_velocity);
+      //   // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
+      //   Number theta_i_j = (mean_w - s).norm() / (mean_w - state_q).norm();
+      //   theta_j = std::min( theta_j, theta_i_j);
+      //   Assert(theta_j >= 0.0 && theta_j <= 1.0,
+      //     ExcMessage("theta_j = "+ std::to_string(theta_j) +
+      //     " must be between 0 and 1"));
+      // }
+
       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        if(comp_i < 2) // I modify density and x momentum
-          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
-            theta_j * 
-            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+          theta_j * 
+          (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
       } 
     }
   }
