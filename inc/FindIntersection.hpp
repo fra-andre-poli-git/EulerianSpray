@@ -8,7 +8,7 @@
 #include"TypesDefinition.hpp"
 
 
-template<int dim> double find_intersection_1d(
+template<int dim> dealii::Tensor<1, dim, Number> find_intersection_1d(
   const dealii::Tensor<1, dim, Number> & q,
   const dealii::Tensor<1, dim, Number> & w,
   const Number & epsilon,

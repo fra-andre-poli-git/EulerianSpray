@@ -13,7 +13,7 @@
 // version.
 // NOTE: here dim is the phase space dimension, not the physical dimension 
 // (therefore is physical dimension plus one)
-template<int dim> double find_intersection_1d(
+template<int dim> dealii::Tensor<1, dim, Number> find_intersection_1d(
   const dealii::Tensor<1, dim, Number> & q,
   const dealii::Tensor<1, dim, Number> & w,
   const Number & epsilon,
@@ -21,28 +21,28 @@ template<int dim> double find_intersection_1d(
   const Number & b)
 {
 
-  // True if I am above the line rho * (b - \epsilon)
-  bool above = (q[1] > q[0] * (b + epsilon));
-  // True if I am below the line rho * (a + \epsilon)
-  bool below = (q[1] < q[0] * (a - epsilon));
+  // True if I am above the line rho * b - \epsilon
+  bool above = (q[1] > q[0] * b + epsilon);
+  // True if I am below the line rho * a + \epsilon
+  bool below = (q[1] < q[0] * a - epsilon);
 
   // If the solution is already in G_\epsilon theta is = 1
   if (!above && !below)
-    return 1.0;
+    return q;
 
-  double y_edge = above ? (b+epsilon) : (a-epsilon);
+  double y_edge = above ? b : a;
 
   auto f = [&](double t)->double {
     const Number rho = w[0] + t*(q[0] - w[0]);
     const Number m   = w[1] + t*(q[1] - w[1]);
-    return static_cast<double>(m - rho * y_edge);
+    return static_cast<double>(m - rho * y_edge - (static_cast<int>(above)*2 - 1 ) * epsilon);
   };
 
   double t0 = 0.0, t1 = 1.0;
   double f0 = f(t0), f1 = f(t1); 
 
-  const int max_it = 50;
-  const double tol = 1e-12;
+  const int max_it = 100;
+  const double tol = 1e-15;
   double t = 0.5;
   // if(f0 * f1 >0)
   //   return 0.0;
@@ -54,12 +54,12 @@ template<int dim> double find_intersection_1d(
     {
       double tm = 0.5*(t0 + t1);
       double fm = f(tm);
-      if (!std::isfinite(fm))
-      {
-        t = 0.5;
-        break;
-      }
-      if ((t1 - t0)*0.5 < tol || std::abs(fm) < 1e-14)
+      // if (!std::isfinite(fm))
+      // {
+      //   t = 0.5;
+      //   break;
+      // }
+      if ((t1 - t0)*0.5 < tol  /* || std::abs(fm) < 1e-14 */)
       {
         t = tm;
         break;
@@ -75,10 +75,14 @@ template<int dim> double find_intersection_1d(
         f0 = fm;
       }
       t = tm;
+      if(it+1 == max_it)
+        std::cout<<"Warning in FindIntersection: bisection method has not converged"<<std::endl;
     }
   }
 
-  return t;
+
+
+  return (1-t) * w + t * q;
 }
 
 template<int dim> double find_intersection(
