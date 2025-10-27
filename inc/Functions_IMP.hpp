@@ -11,7 +11,7 @@ double InitialSolution<dim>::value(const Point<dim> & p,
   {
     case 1:
     {
-      double sigma = 0.1;
+      //double sigma = 0.1;
       if(component == 0)
         //return 1./2 * exp(-pow((p[0]-1./2),2)/pow(sigma,2));
         return sin(p[0]) + 2;
@@ -35,8 +35,8 @@ double InitialSolution<dim>::value(const Point<dim> & p,
         return 1 * (p[0]<0.)
           + 0.25 * (p[0]>=0.);
       if(component==1)
-        return 1 * 0.5 * (p[0]<0.)
-          +  0.25 * 0 * (-0.4) * (p[0]>=0.);
+        return 1 * (p[0]<0.)
+          +  0.25 * 0  * (p[0]>=0.);
       return 0.;
     }
     case 5:
