@@ -69,6 +69,9 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
         periodicity_vector);
       triangulation.add_periodicity(periodicity_vector);
 
+
+      eulerian_spray_operator.set_1d_in_disguise();
+
       final_time = 0.1;
       break;
     }
@@ -107,6 +110,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      eulerian_spray_operator.set_1d_in_disguise();
 
       // final_time = parameters.final_time;
       final_time = 0.5;
@@ -118,7 +122,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
         Point<dim>(-1,0),
-        Point<dim>(1,0.5),
+        Point<dim>(1,0.1),
         true);
       std::vector<GridTools::PeriodicFacePair<
         typename Triangulation<dim>::cell_iterator>> periodicity_vector;
@@ -132,7 +136,12 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
-      final_time = parameters.final_time;
+
+      eulerian_spray_operator.set_1d_in_disguise();
+
+      
+      // final_time = parameters.final_time;
+      final_time = 0.5;
       break;
     }
     // 
@@ -323,8 +332,7 @@ void EulerianSprayProblem<dim, degree>::run()
   double min_cell_measure = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction even though for now I have made them squared
-  if(parameters.testcase==1 || parameters.testcase==2 || parameters.testcase==3
-    || parameters.testcase==4)
+  if(eulerian_spray_operator.get_1d_in_disguise())
   {
     for(const auto & cell : triangulation.active_cell_iterators())
     {
@@ -348,13 +356,15 @@ void EulerianSprayProblem<dim, degree>::run()
   
   
   // In this block I set the time step to comply with CFL condition
-  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
-  QGaussLobatto<1> qgl (M);
-  const auto &weights = qgl.get_weights(); 
-  double CFL = weights[0];
-  time_step = CFL*min_cell_measure /
-    std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
-    std::abs(eulerian_spray_operator.get_min_velocity()));
+  // unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  // QGaussLobatto<1> qgl (M);
+  // const auto &weights = qgl.get_weights(); 
+  // double CFL = weights[0];
+  // time_step = CFL*min_cell_measure /
+  //   std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
+  //   std::abs(eulerian_spray_operator.get_min_velocity()));
+  double CFL = 0.2;
+  time_step = CFL * min_cell_measure * min_cell_measure;
   //double CFL = 1./2.;
   // // Now I set the time step to be exactly the biggest to satisfy CFL condition
   //  time_step = CFL/
@@ -389,12 +399,11 @@ void EulerianSprayProblem<dim, degree>::run()
     pcout<<"Performed time step at time: "<<time<<
       ", time step number: "<< timestep_number<<std::endl;
     
-    // if (static_cast<int>(time / parameters.snapshot) !=
-    //           static_cast<int>((time - time_step) / parameters.snapshot) ||
-    //         time >= final_time - 1e-12)
-    //   output_results(
-    //    static_cast<unsigned int>(std::round(time / parameters.snapshot)));
-    output_results(timestep_number, false);
+    if (static_cast<int>(time / parameters.snapshot) !=
+              static_cast<int>((time - time_step) / parameters.snapshot) ||
+            time >= final_time - 1e-12)
+      output_results(static_cast<unsigned int>(std::round(time / parameters.snapshot)), false);
+    // output_results(timestep_number, false);
 
     // Now if I want a different time step I compute the new onw
     // time_step = CFL/

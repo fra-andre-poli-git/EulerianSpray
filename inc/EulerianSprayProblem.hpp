@@ -54,6 +54,7 @@ class EulerianSprayProblem{
     double final_time;
 
     static constexpr int n_q_points_1d = degree + 2;
+    
     EulerianSprayOperator<dim,degree,n_q_points_1d> eulerian_spray_operator;
     
     class Postprocessor : public DataPostprocessor<dim>{
