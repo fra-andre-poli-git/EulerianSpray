@@ -7,7 +7,7 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     prm.declare_entry("testcase",
       "1",
       Patterns::Integer(0), // Is it ok even if I want an unsigned?
-      "Number of case:"
+      "myReal of case:"
         "- 2: vacuum formation"
         "- 3: moving delta shock"
         "- 4: 2d collapse");
@@ -17,10 +17,10 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     //   Patterns::Integer(0),
     //   "Polynomial degree of finite element basis function for the elements");
 
-    prm.declare_entry("number of elements in x direction",
+    prm.declare_entry("myReal of elements in x direction",
       "400",
       Patterns::Integer(0),
-      "Number of elements along the x direction: for 1d cases elements along y "
+      "myReal of elements along the x direction: for 1d cases elements along y "
         "direction will be set as 5, whereas in 2d cases they will be set "
         "identical as this parameter");
 
@@ -33,6 +33,16 @@ void Parameters::declare_parameters(ParameterHandler & prm)
       "0.05",
       Patterns::Double(0),
       "Time between every snapshot of the solution");
+
+    prm.declare_entry("plot everything",
+      "false",
+      Patterns::Bool(),
+      "True if you want to plot every time step");
+
+    prm.declare_entry("CFL",
+      "0.1",
+      Patterns::Double(0),
+      "CFL myReal");
   }
   prm.leave_subsection();
 
@@ -71,9 +81,11 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     testcase = prm.get_integer("testcase");
     // fe_degree = prm.get_integer("finite element degree");
     // n_q_points_1d = fe_degree + 2;
-    n_el_x_direction = prm.get_integer("number of elements in x direction");
+    n_el_x_direction = prm.get_integer("myReal of elements in x direction");
     final_time = prm.get_double("final time");
-    snapshot = prm.get_double("snapshot instant");
+    snapshot_instant = prm.get_double("snapshot instant");
+    plot_everything = prm.get_bool("plot everything");
+    CFL = prm.get_double("CFL");
   }
   prm.leave_subsection();
 

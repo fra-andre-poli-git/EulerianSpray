@@ -82,9 +82,9 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     solution,
     vec_ri);
     //if(pde_operator.get_1d_in_disguise())
-      pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
+      pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
     //else
-      //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+      //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
       const double c_i = ci[stage];
@@ -98,9 +98,9 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         solution,
         vec_ri);
       //if(pde_operator.get_1d_in_disguise())
-        pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
+        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
       //else
-        //pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+        //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
     }
 }
 
@@ -169,6 +169,8 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const MappingQ1<dim> & mapping,
   const FESystem<dim> & fe) const
 {
+  if(pde_operator.get_1d_in_disguise())
+    pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
   copy_solution.reinit(solution);
   copy_solution=solution;
   vec_ki.reinit(solution);
@@ -180,11 +182,14 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     solution *= factor[stage];
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
-    // Solution limiter
-    if(pde_operator.get_1d_in_disguise())
-      pde_operator.apply_positivity_limiter_1d(solution, dof_handler, mapping, fe);
-    // else
-      // pde_operator.apply_positivity_limiter(solution, dof_handler, mapping, fe);
+    if(stage < n_stages -1)
+    {
+      // Solution limiter
+      if(pde_operator.get_1d_in_disguise())
+        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+      // else
+        // pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    }
   }
 }
 

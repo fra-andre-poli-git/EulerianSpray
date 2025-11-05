@@ -8,16 +8,16 @@
 #include"TypesDefinition.hpp"
 
 
-template<int dim> dealii::Tensor<1, dim, Number> find_intersection_1d(
-  const dealii::Tensor<1, dim, Number> & q,
-  const dealii::Tensor<1, dim, Number> & w,
-  const Number & epsilon,
-  const Number & a,
-  const Number & b);
+template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(
+  const dealii::Tensor<1, dim, myReal> & q,
+  const dealii::Tensor<1, dim, myReal> & w,
+  const myReal & epsilon,
+  const myReal & a,
+  const myReal & b);
 
 template<int dim> double find_intersection(
-  dealii::Tensor<1, dim, Number>  q,
-  dealii::Tensor<1, dim, Number>  w,
+  dealii::Tensor<1, dim, myReal>  q,
+  dealii::Tensor<1, dim, myReal>  w,
   double epsilon,
   double s);
   

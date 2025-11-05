@@ -11,7 +11,9 @@ struct Parameters
   unsigned int testcase;
   unsigned int n_el_x_direction;
   double final_time;
-  double snapshot;
+  double snapshot_instant;
+  bool plot_everything;
+  double CFL;
   RungeKuttaScheme scheme;
   NumericalFlux numerical_flux_type;
 

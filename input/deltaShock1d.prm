@@ -2,9 +2,11 @@
 
 subsection Problem parameters
   set testcase = 3
-  set number of elements in x direction = 100 
+  set myReal of elements in x direction = 60 #for 1d cases, use a multiple of 20
   set final time = 0.5
-  set snapshot instant = 0.0125
+  set snapshot instant = 0.001
+  set plot everything = false
+  set CFL = 0.1
 end
 
 subsection Integrator parameters
@@ -16,7 +18,7 @@ subsection Integrator parameters
 #  forward_euler,
 #  ssp_stage_2_order_2,
 #  ssp_stage_3_order_3,
-  set Runge Kutta scheme = ssp_stage_3_order_3
+  set Runge Kutta scheme = forward_euler
 end
 
 subsection Operator parameters
@@ -25,5 +27,5 @@ subsection Operator parameters
 #  local_lax_friedrichs_modified
 #  harten_lax_vanleer
 #  godunov
-  set numerical flux type= godunov
+  set numerical flux type = local_lax_friedrichs_modified
 end

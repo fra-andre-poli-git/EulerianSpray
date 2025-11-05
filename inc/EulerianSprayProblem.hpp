@@ -29,13 +29,16 @@ class EulerianSprayProblem{
     // This is the function that makes grid and dofs
     void make_grid_and_dofs();
 
-    void output_results(const unsigned int result_number, bool final_time);
+    void output_results(const unsigned int result_myReal, bool final_time);
 
     SolutionType solution;
 
     ConditionalOStream pcout;
-    // TODO: put an if to get distributed triangulation
+#ifdef DEAL_II_WITH_P4EST
+    parallel::distributed::Triangulation<dim> triangulation;
+#else
     Triangulation<dim> triangulation;
+#endif
 
     Parameters parameters;
 

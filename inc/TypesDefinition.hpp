@@ -7,11 +7,11 @@
 // TODO: this shouldn't be here...
 using namespace dealii;
 
-using Number = double;
+using myReal = double;
 
-// Step 67 uses a LinearAlgebra::distributed::Vector<Number> 
+// Step 67 uses a LinearAlgebra::distributed::Vector<myReal> 
 // which needs #include<deal.II/lac/la_parallel_vector.h>
-using SolutionType = LinearAlgebra::distributed::Vector<Number>;
+using SolutionType = LinearAlgebra::distributed::Vector<myReal>;
 // I have to use distributed one since I use solution.local_element(i), for
 // instance in line 121 of EulerianSprayOperator.cpp
 // TODO: make the code work for both Vector and distributed::Vector

@@ -22,6 +22,9 @@ template<int dim, int degree>
 EulerianSprayProblem<dim, degree>::EulerianSprayProblem(
   const Parameters & params):
     pcout(std::cout, Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0),
+#ifdef DEAL_II_WITH_P4EST
+    triangulation(MPI_COMM_WORLD),
+#endif
     parameters(params),    
     fe(FE_DGQ<dim>(degree),dim+1), // Lagrange basis functions
     mapping(),
@@ -81,7 +84,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       // Note the fact that last argument is true, therefore we get different
       // boundary_id for the four boundaries (process called "colorization")
       //
-      // I link the number of elements in y direction to the ones in x, assuring
+      // I link the myReal of elements in y direction to the ones in x, assuring
       // that the cells are squared, since I may have problems in determining
       // the time step (even though I am rewiewing the function that computes
       // the speed)
@@ -98,8 +101,14 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       // as they where interior faces neighboring to the ones at the opposite
       // boundary, and as so will be treated in the apply functions of 
       // EulerianSprayOperator
+#ifdef DEAL_II_WITH_P4EST
       std::vector<GridTools::PeriodicFacePair<
-        typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+        typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
+#else
+      std::vector<GridTools::PeriodicFacePair<
+      typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+#endif
+
       GridTools::collect_periodic_faces(triangulation,
         2,
         3,
@@ -120,12 +129,17 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
     case 3:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
-        Point<dim>(-1,0),
-        Point<dim>(1,0.1),
+        {parameters.n_el_x_direction,parameters.n_el_x_direction/10},
+        Point<dim>(-0.5,0),
+        Point<dim>(0.5,0.1),
         true);
+#ifdef DEAL_II_WITH_P4EST
       std::vector<GridTools::PeriodicFacePair<
-        typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+        typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
+#else
+      std::vector<GridTools::PeriodicFacePair<
+      typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+#endif
       GridTools::collect_periodic_faces(triangulation,
         2,
         3,
@@ -178,7 +192,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
   eulerian_spray_operator.reinit(mapping, dof_handler);
   eulerian_spray_operator.initialize_vector(solution);
 
-  std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
+  std::cout<< "myReal of degrees of freedom "<<dof_handler.n_dofs()
             << " ( = " << (dim + 1) << " [vars] x "
             << triangulation.n_global_active_cells() << " [cells] x "
             << Utilities::pow(degree + 1, dim) << " [dofs/cell/var] )"
@@ -188,7 +202,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 // This is the function that writes the solution in a .vtk file
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::output_results(
-  const unsigned int result_number,
+  const unsigned int result_myReal,
   bool final_time)
 {
   // In testcase 2 I have the exact solution at final time
@@ -278,7 +292,7 @@ void EulerianSprayProblem<dim, degree>::output_results(
   {
     const std::string filename = 
       "./results/solution_" +
-        Utilities::int_to_string(result_number, 3) + ".vtu";
+        Utilities::int_to_string(result_myReal, 3) + ".vtu";
     data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
   }
 }
@@ -287,14 +301,14 @@ template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::run()
 {
   {
-    const unsigned int n_vect_number = VectorizedArray<Number>::size();
-    const unsigned int n_vect_bits   = 8 * sizeof(Number) * n_vect_number;
+    const unsigned int n_vect_myReal = VectorizedArray<myReal>::size();
+    const unsigned int n_vect_bits   = 8 * sizeof(myReal) * n_vect_myReal;
 
     pcout << "Running with "
           << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
           << " MPI processes" << std::endl;
-    pcout << "Vectorization over " << n_vect_number << ' '
-          << (std::is_same<Number, double>::value ? "doubles" : "floats")
+    pcout << "Vectorization over " << n_vect_myReal << ' '
+          << (std::is_same<myReal, double>::value ? "doubles" : "floats")
           << " = " << n_vect_bits << " bits ("
           << Utilities::System::get_current_vectorization_level() << ')'
           << std::endl;
@@ -326,6 +340,9 @@ void EulerianSprayProblem<dim, degree>::run()
   // extrema to be used in the limiting phase
   eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
   eulerian_spray_operator.compute_velocity_extrema_1d(solution);
+  std::cout << "I computed intial velocity extrema, that happen to be "
+    << eulerian_spray_operator.get_max_velocity() << " and "
+    << eulerian_spray_operator.get_min_velocity()<<std::endl;
 
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
@@ -356,15 +373,28 @@ void EulerianSprayProblem<dim, degree>::run()
   
   
   // In this block I set the time step to comply with CFL condition
-  // unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
-  // QGaussLobatto<1> qgl (M);
-  // const auto &weights = qgl.get_weights(); 
-  // double CFL = weights[0];
+  
   // time_step = CFL*min_cell_measure /
   //   std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
   //   std::abs(eulerian_spray_operator.get_min_velocity()));
-  double CFL = 0.2;
+  double CFL = parameters.CFL;
   time_step = CFL * min_cell_measure * min_cell_measure;
+
+  // If I use Godunov flux I can check if the time step satisfies the CFL condition
+  // provided by [49]
+  if(parameters.numerical_flux_type == godunov &&
+    eulerian_spray_operator.get_1d_in_disguise())
+  {
+  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  QGaussLobatto<1> qgl (M);
+  const auto &weights = qgl.get_weights(); 
+  double CFL = weights[0];
+    Assert(time_step < CFL*min_cell_measure /
+      std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
+      std::abs(eulerian_spray_operator.get_min_velocity())),
+      ExcMessage("This time step doesn't comply with its CFL condition") );
+  }
+
   //double CFL = 1./2.;
   // // Now I set the time step to be exactly the biggest to satisfy CFL condition
   //  time_step = CFL/
@@ -379,10 +409,10 @@ void EulerianSprayProblem<dim, degree>::run()
     output_results(0, false);
   // This is the time loop
   time = 0;
-  unsigned int timestep_number = 0;
+  unsigned int timestep_myReal = 0;
   while(time < final_time - 1e-12)
   {
-    ++timestep_number;
+    ++timestep_myReal;
 
     // Here the integration in time is performed by the integrator
     integrator->perform_time_step(eulerian_spray_operator,
@@ -397,13 +427,21 @@ void EulerianSprayProblem<dim, degree>::run()
   
 
     pcout<<"Performed time step at time: "<<time<<
-      ", time step number: "<< timestep_number<<std::endl;
+      ", time step number: "<< timestep_myReal<<std::endl;
+
+    if(parameters.plot_everything)
+      output_results(timestep_myReal, false);
+    else
+    {
+      if(static_cast<int>(time / parameters.snapshot_instant) !=
+        static_cast<int>((time - time_step) / parameters.snapshot_instant) ||
+        time >= final_time - 1e-12)
+        output_results(
+          static_cast<unsigned int>(
+            std::round(time / parameters.snapshot_instant)),
+          false);
+    }
     
-    if (static_cast<int>(time / parameters.snapshot) !=
-              static_cast<int>((time - time_step) / parameters.snapshot) ||
-            time >= final_time - 1e-12)
-      output_results(static_cast<unsigned int>(std::round(time / parameters.snapshot)), false);
-    // output_results(timestep_number, false);
 
     // Now if I want a different time step I compute the new onw
     // time_step = CFL/
@@ -413,12 +451,12 @@ void EulerianSprayProblem<dim, degree>::run()
     // if the new time step exceeds the final time i cut it
     if((time + time_step) >= final_time)
         time_step = final_time - time;
-    pcout<<"New time step: "<<time_step<<std::endl;
+    // pcout<<"New time step: "<<time_step<<std::endl;
     time += time_step; 
   }
 
   // A final output
-  output_results(timestep_number, true);
+  output_results(timestep_myReal, true);
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;
 }
