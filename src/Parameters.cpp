@@ -66,7 +66,6 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     prm.declare_entry("numerical flux type",
       "local_lax_friedrichs",
       Patterns::MultipleSelection("local_lax_friedrichs|"
-        "local_lax_friedrichs_modified|"
         "harten_lax_vanleer|"
         "godunov"),
       "Type of the numerical flux used between the interfaces of the elements");
@@ -118,8 +117,6 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     std::string selected_flux = prm.get("numerical flux type");
     if(selected_flux == "local_lax_friedrichs")
       numerical_flux_type = local_lax_friedrichs;
-    else if(selected_flux == "local_lax_friedrichs_modified")
-      numerical_flux_type = local_lax_friedrichs_modified;
     else if(selected_flux == "harten_lax_vanleer")
       numerical_flux_type = harten_lax_vanleer;
     else if(selected_flux == "godunov")
