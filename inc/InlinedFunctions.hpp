@@ -162,15 +162,6 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, myReal> & w_minus,
       }
       return flux;
     }
-    case local_lax_friedrichs_modified:
-    {
-      // This is the modified version from tutorial
-      const auto delta  = 0.5 * std::sqrt(std::max(velocity_plus.norm_square(),
-        velocity_minus.norm_square()));
-
-      return 0.5 * (flux_minus * normal + flux_plus * normal) +
-        0.5 * delta * (w_minus - w_plus);
-    }
     case harten_lax_vanleer:
     {
       const auto avg_velocity_normal = 

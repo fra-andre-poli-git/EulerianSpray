@@ -20,7 +20,6 @@ using SolutionType = LinearAlgebra::distributed::Vector<myReal>;
 enum NumericalFlux
 {
   local_lax_friedrichs,
-  local_lax_friedrichs_modified,
   harten_lax_vanleer,
   godunov,
 };
