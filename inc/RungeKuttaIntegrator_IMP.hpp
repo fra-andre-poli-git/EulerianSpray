@@ -182,14 +182,14 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     solution *= factor[stage];
     solution.add(factor[stage]*time_step, vec_ki);
     solution.add(1-factor[stage], copy_solution);
-    if(stage < n_stages -1)
-    {
-      // Solution limiter
-      if(pde_operator.get_1d_in_disguise())
-        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
-      // else
-        // pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
-    }
+    // if(stage < n_stages -1)
+    // {
+    //   // Solution limiter
+    //   if(pde_operator.get_1d_in_disguise())
+    //     pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+    //   // else
+    //     // pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    // }
   }
 }
 

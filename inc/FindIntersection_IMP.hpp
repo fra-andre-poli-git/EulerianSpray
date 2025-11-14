@@ -20,9 +20,9 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(const deal
 {
 
   // True if I am above the line rho * b - \epsilon
-  bool above = (q[1] > q[0] * (b - epsilon));
+  bool above = (q[1] > q[0] * (b + epsilon));
   // True if I am below the line rho * a + \epsilon
-  bool below = (q[1] < q[0] * (a + epsilon));
+  bool below = (q[1] < q[0] * (a - epsilon));
 
   // If the solution is already in G_\epsilon theta is = 1
   if (!above && !below)
@@ -47,14 +47,15 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(const deal
   double tm,fm;
   if(f0 * f1 > 0.) // if the velocity are both outside the boundary
   {
-    // If the average is outside G_epsilon (but I know that it is inside G) the 
-    if((w[1] >= w[0] * (b - epsilon)) || (w[1] <= w[0] * (a + epsilon)))
-      return w;
-    else
-      Assert(true, ExcMessage("I don't know why it appears both q and w are on the same side of realizability boundary")) 
+    // // If the average is outside G_epsilon (but I know that it is inside G) the 
+    // if((w[1] >= w[0] * (b + epsilon)) || (w[1] <= w[0] * (a - epsilon)))
+    //   return w;
+    // else
+    //   Assert(false, ExcMessage("I don't know why it appears both q and w are on the same side of realizability boundary")) 
+    return w;
   }
-  Assert(f0 * f1 <= 0.0,
-          ExcMessage("Problem inside FindIntersection: cell average results outside the realizability boundary"));
+  // Assert(f0 * f1 <= 0.0,
+  //         ExcMessage("Problem inside FindIntersection: cell average results outside the realizability boundary"));
   // else // therefore (f0 * f1 <= 0.0) 
   {
     for (int it=0; it<max_it; ++it)

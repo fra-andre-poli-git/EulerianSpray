@@ -392,7 +392,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   //-------------------------Modify the solution--------------------------------
   // TODO: this implementation is only for 1D cases, extend it to general dim
   // Set up a small myReal
-  myReal epsilon = 1e-13;
+  myReal epsilon = 1e-12;
   // Set the quadrature points
   // For the moment I use a quadrature formula only for 1D in disguise
   // since I first test the limiter in 1D cases. TODO: extend it to 2D and
@@ -450,20 +450,20 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       {
         myReal diff_den = cell_average_density - rho_min;
         // std::cout << "Diff den is "<< std::setprecision(std::numeric_limits<double>::max_digits10)<<diff_den<<std::endl;
-        // myReal theta = 0.;
-        myReal diff_num = cell_average_density - epsilon;
-        myReal numeric_tolerance = 1e-11;
-        myReal theta = diff_num / (diff_den /*+ numeric_tolerance*/);
-        if(diff_den > numeric_tolerance)
+        // myReal theta = 1.;
+        // if(diff_den > 1e-12)
         // {
         //   myReal diff_num = cell_average_density - epsilon;
-        //   std::cout << "Diff num is " << std::setprecision(std::numeric_limits<double>::max_digits10)
-        //       <<diff_num<<std::endl;
-        //   if(std::abs(diff_num - diff_den) < numeric_tolerance)
-        //     theta = diff_num / (diff_den /*+ numeric_tolerance*/);
+        //   //std::cout << "Diff num is " << std::setprecision(std::numeric_limits<double>::max_digits10)
+        //       // <<diff_num<<std::endl;
+        //   if(std::abs(diff_num - diff_den) < 1e-12)
+        //     theta = diff_num / (diff_den );
         //   else
         //     theta = diff_num / diff_den;
         // }  
+
+        myReal diff_num = cell_average_density - epsilon;
+        myReal theta = diff_num / (diff_den + 1e-14);
 
         // std::cout << "Theta is "<< std::setprecision(std::numeric_limits<double>::max_digits10) << theta << std::endl;
         Assert(theta >= 0.0 && theta <= 1.0,
@@ -534,6 +534,11 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           theta_i_j = (mean_w - s).norm() / (diff_den);
           // std::cout << "Theta_i_j is " << theta_i_j << std::endl;
         }
+        
+
+        // dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
+        //     0.0, min_velocity, max_velocity);
+        // theta_i_j = (mean_w - s).norm() / (diff_den + 1e-14);
         // Compare theta^i_j with theta_j and set theta_j = min(theta_j, theta^i_j)
         theta_j = std::min( theta_j, theta_i_j);
         Assert(theta_j >= 0.0 && theta_j <= 1.0,
@@ -548,37 +553,37 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           (1.-theta_j) * cell_averages[cell_no][comp_i] +
           theta_j * (solution(local_dof_indices[i]));
       }
-      for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
-      {
-        unsigned int comp_i = fe.system_to_component_index(i).first;
+      // for (unsigned int i = 0; i < fe.dofs_per_cell; ++i)
+      // {
+      //   unsigned int comp_i = fe.system_to_component_index(i).first;
 
-        if (comp_i == 1)// If the dof is associated to x momentum (ρu)
-        {
-          // Define the local index of the node (0..dofs_per_node-1)
-          const unsigned int base_index =
-              fe.system_to_component_index(i).second;
-          // Find the index of density associated to the same node
-          const unsigned int system_index_rho =
-              fe.component_to_system_index(0, base_index);
+      //   if (comp_i == 1)// If the dof is associated to x momentum (ρu)
+      //   {
+      //     // Define the local index of the node (0..dofs_per_node-1)
+      //     const unsigned int base_index =
+      //         fe.system_to_component_index(i).second;
+      //     // Find the index of density associated to the same node
+      //     const unsigned int system_index_rho =
+      //         fe.component_to_system_index(0, base_index);
 
-          const unsigned int dof_rho  = local_dof_indices[system_index_rho];
-          const unsigned int dof_rhou = local_dof_indices[i];
+      //     const unsigned int dof_rho  = local_dof_indices[system_index_rho];
+      //     const unsigned int dof_rhou = local_dof_indices[i];
 
-          const double rho  = solution(dof_rho);
-          const double rhou = solution(dof_rhou);
-          double u = (rho != 0.0) ? rhou / rho : 0.0;
+      //     const double rho  = solution(dof_rho);
+      //     const double rhou = solution(dof_rhou);
+      //     double u = (rho != 0.0) ? rhou / rho : 0.0;
 
-          if (u > max_velocity + 1e-13 || u < min_velocity - 1e-13)
-          {
-            std::cerr << "Problem in projected velocity: u = " <<std::setprecision(std::numeric_limits<double>::max_digits10)<< u;
-            std::cerr << " theta_j is " << theta_j;
+      //     if (u > max_velocity + 1e-13 || u < min_velocity - 1e-13)
+      //     {
+      //       std::cerr << "Problem in projected velocity: u = " <<std::setprecision(std::numeric_limits<double>::max_digits10)<< u;
+      //       std::cerr << " theta_j is " << theta_j;
 
-            //std::cerr << "The average velocity is " << cell_average_x_velocities[cell_no];
-            std::cerr << " Max velocity is " << max_velocity
-              << " and min velocity is " << min_velocity<<std::endl;
-          }
-        }
-      }
+      //       //std::cerr << "The average velocity is " << cell_average_x_velocities[cell_no];
+      //       std::cerr << " Max velocity is " << max_velocity
+      //         << " and min velocity is " << min_velocity<<std::endl;
+      //     }
+      //   }
+      // }
 
     }
   }
@@ -861,8 +866,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
 
   max_velocity = max_velocity_x;
   min_velocity = min_velocity_x;
-  // max_velocity = 1.;
-  // min_velocity = 0.;
+  // max_velocity = 0.4;
+  // min_velocity = -0.5;
 
 
 }
