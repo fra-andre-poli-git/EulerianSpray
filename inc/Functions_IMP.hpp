@@ -1,11 +1,13 @@
+#define _USE_MATH_DEFINES
+
 #include"TypesDefinition.hpp"
 
 #include<deal.II/base/point.h>
 #include<cmath>
+// #include<numbers> // This version works with C++20
 
 template<int dim>
-double InitialSolution<dim>::value(const Point<dim> & p,
-    const unsigned int component) const
+double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int component) const
 {
   switch(parameters.testcase)
   {
@@ -44,7 +46,7 @@ double InitialSolution<dim>::value(const Point<dim> & p,
     }
     case 5:
     {
-      if(component==0)
+      if(component == 0)
         return 0.9*(((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) ||
           ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15)))
           + 0.1;
@@ -52,6 +54,23 @@ double InitialSolution<dim>::value(const Point<dim> & p,
         return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) 
           - 0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
       return 0.;
+    }
+    case 7:
+    {
+      if(component == 0) // \rho
+        return 1./100.;
+      else
+      {
+        // Define theta
+        double theta = std::acos(p[0]/std::sqrt(p[0]*p[0] + p[1]*p[1]));
+        if (p[1] < 0.)
+          theta = 2. * M_PI - theta;
+          // theta = 2. * std::numbers::pi - theta; // this version works with C++20
+        if(component == 1) // \rho u
+          return 1./100. * (-1./10.) * std::cos(theta);
+        if (component == 2) // \rho v
+          return 1./100. * (-1./10.) * std::sin(theta);
+      }
     }
     default:
     {
@@ -113,7 +132,7 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p,
     case 2:
     {
       if(component == 0)
-        return 0.5*(p[0]< -0.75) 
+        return 0.5 * (p[0]< -0.75) 
           + 0 * (p[0]>= -0.75) * (p[0]< -0.3) 
           + 0.5 * (p[0]>= -0.3) * (p[0]<0.2) 
           + 1 * (p[0]>=0.2) * (p[0]<0.6)
