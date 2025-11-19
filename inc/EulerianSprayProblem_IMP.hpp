@@ -1,7 +1,7 @@
 #include"TypesDefinition.hpp"
 #include"RungeKuttaIntegrator.hpp"
 #include"Functions.hpp"
-#include"InlinedFunctions.hpp"
+#include"InlinedOperations.hpp"
 #include"Parameters.hpp"
 
 
@@ -125,7 +125,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = 0.5;
       break;
     }
-    // Moving delta-shock 1D
+    // Delta-shock 1D
     case 3:
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
@@ -158,9 +158,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = 0.5;
       break;
     }
-    // 
-    case 4:{}
-    // 
+    // Test diffusivity 2d
     case 5:
     {
       GridGenerator::subdivided_hyper_cube(triangulation,
@@ -176,12 +174,39 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    // 2d vacuum
-    case 6:{}
-    // 2d stationary delta-shock
+    // Delta in the origin 2d
     case 7:
-    // Taylor-Green vortices
+    {
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      final_time = parameters.final_time;
+      break;
+    }
     case 8:
+    {
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
+      final_time = parameters.final_time;
+      break;
+    }
+    // Taylor-Green vortices
+    case 11:
     {
       GridGenerator::hyper_cube(triangulation, 0, 1, true);
     }
@@ -201,9 +226,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 
 // This is the function that writes the solution in a .vtk file
 template<int dim, int degree>
-void EulerianSprayProblem<dim, degree>::output_results(
-  const unsigned int result_myReal,
-  bool final_time)
+void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result_myReal, bool final_time)
 {
   // In testcase 2 I have the exact solution at final time
   if(parameters.testcase==2 && final_time)
@@ -255,7 +278,10 @@ void EulerianSprayProblem<dim, degree>::output_results(
     SolutionType ExactFinalSolution;
     ExactFinalSolution.reinit(solution);
     eulerian_spray_operator.project(FinalSolutionVelocity<dim>(parameters),
-      ExactFinalSolution);
+     ExactFinalSolution);
+    // VectorTools::interpolate(dof_handler,
+    //   FinalSolutionVelocity<dim>(parameters),
+    //   ExactFinalSolution);
 
     std::vector<std::string> names;
     names.emplace_back("Exact_density");
@@ -339,46 +365,58 @@ void EulerianSprayProblem<dim, degree>::run()
   // Here I initialize the solution with the initial data and I compute its
   // extrema to be used in the limiting phase
   eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
-  eulerian_spray_operator.compute_velocity_extrema_1d(solution);
-  std::cout << "I computed intial velocity extrema, that happen to be "
-    << eulerian_spray_operator.get_max_velocity() << " and "
-    << eulerian_spray_operator.get_min_velocity()<<std::endl;
+
+  if(eulerian_spray_operator.get_1d_in_disguise())
+  {
+    eulerian_spray_operator.compute_velocity_extrema_1d(solution);
+    std::cout << "I computed intial velocity extrema, that happen to be "
+      << eulerian_spray_operator.get_max_velocity() << " and "
+      << eulerian_spray_operator.get_min_velocity()<<std::endl;
+  }
+  else
+  {  
+    eulerian_spray_operator.compute_velocity_max_norm(solution);
+    std::cout << "I computed initial velocity max norm, that happen to be "
+      << eulerian_spray_operator.get_max_velocity()<<std::endl;
+  }
 
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
-  double min_cell_measure = std::numeric_limits<double>::max();
+  double min_cell_length = std::numeric_limits<double>::max();
   // If the test is a 1d test in disguise, I will take as h the size of the cell
   // in x direction even though for now I have made them squared
   if(eulerian_spray_operator.get_1d_in_disguise())
   {
     for(const auto & cell : triangulation.active_cell_iterators())
     {
-      const Point<dim> &v0 = cell->vertex(0);
-      const Point<dim> &v1 = cell->vertex(1);
-      const double hx = std::abs(v1(0) - v0(0)); 
-      min_cell_measure =
-        std::min(min_cell_measure, hx);
+      // const Point<dim> &v0 = cell->vertex(0);
+      // const Point<dim> &v1 = cell->vertex(1);
+      // const double hx = std::abs(v1(0) - v0(0)); 
+      min_cell_length =
+        std::min(min_cell_length, /*hx*/cell->extent_in_direction(0));
     }
   }
-  // Otherwise I will use the minimum distance between vertices
-  else
+  else // Otherwise I will use the diagonal
   {
     for(const auto & cell : triangulation.active_cell_iterators())
-      min_cell_measure =
-        std::min(min_cell_measure, cell->diameter());
+      min_cell_length =
+        std::min(min_cell_length, /*cell->diameter()*/ cell->extent_in_direction(0));
   }
   // with MPI here I have to make the minimum over all processors
-  min_cell_measure =
-    Utilities::MPI::min(min_cell_measure, MPI_COMM_WORLD);
+  min_cell_length =
+    Utilities::MPI::min(min_cell_length, MPI_COMM_WORLD);
   
   
   // In this block I set the time step to comply with CFL condition
   
-  // time_step = CFL*min_cell_measure /
+  // time_step = CFL*min_cell_length /
   //   std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
   //   std::abs(eulerian_spray_operator.get_min_velocity()));
   double CFL = parameters.CFL;
-  time_step = CFL * min_cell_measure * min_cell_measure;
+  if(eulerian_spray_operator.get_1d_in_disguise())
+    time_step = CFL * min_cell_length * min_cell_length;
+  else
+    time_step = CFL * std::pow(min_cell_length, 3./2.);
 
   // If I use Godunov flux I can check if the time step satisfies the CFL condition
   // provided by [49]
@@ -389,7 +427,7 @@ void EulerianSprayProblem<dim, degree>::run()
   QGaussLobatto<1> qgl (M);
   const auto &weights = qgl.get_weights(); 
   double CFL = weights[0];
-    Assert(time_step < CFL*min_cell_measure /
+    Assert(time_step < CFL*min_cell_length /
       std::max(std::abs(eulerian_spray_operator.get_max_velocity()),
       std::abs(eulerian_spray_operator.get_min_velocity())),
       ExcMessage("This time step doesn't comply with its CFL condition") );
@@ -402,7 +440,7 @@ void EulerianSprayProblem<dim, degree>::run()
   //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
 
   pcout << "Time step size: " << time_step
-    << ", minimal h: " << min_cell_measure
+    << ", minimal h: " << min_cell_length
     << std::endl
     << std::endl;
 
@@ -447,7 +485,7 @@ void EulerianSprayProblem<dim, degree>::run()
     // time_step = CFL/
     //   Utilities::truncate_to_n_digits(
     //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
-    // time_step = CFL*min_cell_measure/ eulerian_spray_operator.compute_cell_transport_speed(solution);
+    // time_step = CFL*min_cell_length/ eulerian_spray_operator.compute_cell_transport_speed(solution);
     // if the new time step exceeds the final time i cut it
     if((time + time_step) >= final_time)
         time_step = final_time - time;
@@ -499,8 +537,7 @@ std::vector<std::string> EulerianSprayProblem<dim, degree>::Postprocessor::
 
 template<int dim, int degree>
 std::vector<DataComponentInterpretation::DataComponentInterpretation>
-  EulerianSprayProblem<dim, degree>::Postprocessor::
-    get_data_component_interpretation() const
+  EulerianSprayProblem<dim, degree>::Postprocessor::get_data_component_interpretation() const
 {
   std::vector<DataComponentInterpretation::DataComponentInterpretation>
     interpretation;

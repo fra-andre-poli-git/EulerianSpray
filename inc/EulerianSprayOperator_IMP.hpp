@@ -1,5 +1,5 @@
 #include"EulerianSprayOperator.hpp"
-#include"InlinedFunctions.hpp"
+#include"InlinedOperations.hpp"
 #include"FindIntersection.hpp"
 
 #include<deal.II/fe/fe_system.h> 
@@ -38,9 +38,7 @@ EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
 // the fast inversion of the mass matrix by tensor product techniques,
 // necessary to ensure optimal computational efficiency overall.
 template <int dim, int degree, int n_q_points_1d>
-  void EulerianSprayOperator<dim, degree, n_q_points_1d>::reinit(
-    const Mapping<dim> &   mapping,
-    const DoFHandler<dim> &dof_handler)
+  void EulerianSprayOperator<dim, degree, n_q_points_1d>::reinit(const Mapping<dim> &   mapping, const DoFHandler<dim> &dof_handler)
 {
   const std::vector<const DoFHandler<dim> *> dof_handlers = {&dof_handler};
   const AffineConstraints<double> dummy;
@@ -200,7 +198,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::project(
   const Function<dim> & function,
   SolutionType &solution) const
 {
-  FEEvaluation<dim, degree, degree + 1, dim + 1, myReal> phi(data, 0, 1);
+  FEEvaluation<dim, degree, 2*(degree + 1), dim + 1, myReal> phi(data, 0, 1);
   MatrixFreeOperators::CellwiseInverseMassMatrix<dim, degree, dim + 1, myReal>
     inverse(phi);
   solution.zero_out_ghost_values();
@@ -616,6 +614,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
     endc = dof_handler.end();
   // TODO: this loop may not be very efficient since I do not access cell_averages
   // sequentially
+  typename DoFHandler<dim>::active_cell_iterator initial_iterator = cell;
   for(; cell!=endc; ++cell)
   {
     // Compute cell average
@@ -659,7 +658,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   // FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
   n_q_points = quadrature_x.size();
   // Loop over cells
-  cell = dof_handler.begin_active();
+  cell = initial_iterator;
   std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
   for (; cell!=endc; ++cell)
   {
@@ -828,9 +827,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
   // max_velocity = max_velocity_u;
   // min_velocity = min_velocity_u;
 
-    TimerOutput::Scope t(timer, "compute velocity x extrema");
-  myReal             max_velocity_x = std::numeric_limits<myReal>::lowest();
-  myReal             min_velocity_x = std::numeric_limits<myReal>::max();
+  TimerOutput::Scope t(timer, "compute velocity x extrema");
+  myReal max_velocity_x = std::numeric_limits<myReal>::lowest();
+  myReal min_velocity_x = std::numeric_limits<myReal>::max();
   FEEvaluation<dim, degree, degree + 1, dim + 1, myReal> phi(data, 0, 1);
 
   for (unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
@@ -852,7 +851,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
       local_min = std::min(local_min, velocity_x);
     }
             
-    // Estrai i valori dal VectorizedArray
+    // Extract values from VectorizedArray
     for (unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell); ++v)
     {
       max_velocity_x = std::max(max_velocity_x, local_max[v]);
@@ -860,7 +859,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
     }
   }
       
-  // Riduzione MPI
+  // MPI reduction
   max_velocity_x = Utilities::MPI::max(max_velocity_x, MPI_COMM_WORLD);
   min_velocity_x = Utilities::MPI::min(min_velocity_x, MPI_COMM_WORLD);
 
@@ -873,7 +872,42 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
 }
 
 template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_inverse_mass_matrix( const MatrixFree<dim, myReal> & data, SolutionType & dst, const SolutionType & src, const std::pair<unsigned int, unsigned int> & cell_range) const
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::
+  compute_velocity_max_norm(const SolutionType & solution)
+{
+  TimerOutput::Scope t(timer, "compute velocity norm extrema");
+  myReal max_velocity_norm = std::numeric_limits<myReal>::lowest();
+  FEEvaluation<dim, degree, degree + 1, dim + 1, myReal> phi(data, 0, 1);
+
+  for(unsigned int cell = 0; cell < data.n_cell_batches(); ++cell)
+  {
+    phi.reinit(cell);
+    phi.gather_evaluate(solution, EvaluationFlags::values);
+    VectorizedArray<myReal> local_max = std::numeric_limits<myReal>::lowest();
+
+    for(unsigned int q = 0; q < phi.n_q_points; ++q)
+    {
+      const auto solution_q = phi.get_value(q);
+      const auto velocity = eulerian_spray_velocity<dim>(solution_q);
+
+      const auto velocity_norm = velocity * velocity;
+
+      local_max = std::max(local_max, velocity_norm);
+    }
+
+    for(unsigned int v = 0; v < data.n_active_entries_per_cell_batch(cell); ++v)
+      max_velocity_norm = std::max(max_velocity_norm, local_max[v]);
+  }
+
+  // MPI reduction
+  max_velocity_norm = Utilities::MPI::max(max_velocity_norm, MPI_COMM_WORLD);
+
+  max_velocity = max_velocity_norm;
+  min_velocity = 0.;  
+}
+
+template<int dim, int degree, int n_q_points_1d>
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_inverse_mass_matrix(const MatrixFree<dim, myReal> & data, SolutionType & dst, const SolutionType & src, const std::pair<unsigned int, unsigned int> & cell_range) const
 {
   FEEvaluation<dim, degree, degree + 1, dim + 1, myReal>
     phi(data, 0, 1);
@@ -936,7 +970,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_cell(
 
 // This function performs the integration over the element's faces. The only
 // modification w.r.t. the tutorial 67 is the fact that here I am using a
-// different numerical flux, defined in InlinedFunctions.h
+// different numerical flux, defined in InlinedOperations.h
 template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_face(
   const MatrixFree<dim, myReal> & data,

@@ -4,7 +4,7 @@
 #include"TypesDefinition.hpp"
 #include"EulerianSprayOperator.hpp"
 #include"EulerianSprayOperator_IMP.hpp"
-#include"InlinedFunctions.hpp"
+#include"InlinedOperations.hpp"
 #include"Parameters.hpp"
 
 #include<deal.II/grid/tria.h>

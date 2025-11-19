@@ -72,6 +72,8 @@ class EulerianSprayOperator{
 
     void compute_velocity_extrema_1d(const SolutionType & solution);
 
+    void compute_velocity_max_norm(const SolutionType & solution);
+
     myReal get_max_velocity() const {return max_velocity;};
 
     myReal get_min_velocity() const {return min_velocity;};

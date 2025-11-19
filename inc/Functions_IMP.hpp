@@ -1,3 +1,4 @@
+// I define this to use M_PI in order to get pi value with a pre-C++20 standard
 #define _USE_MATH_DEFINES
 
 #include"TypesDefinition.hpp"
@@ -44,6 +45,15 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
           +  0.25 * 0  * (p[0]>=0.);
       return 0.;
     }
+    case 4:
+    {
+      if(component == 0)
+        return 0.5;
+      if(component == 1)
+        return 0.5 * (-0.5) * (p[0]<0.)
+          + 0.5 * 0.4 * (p[0]>0.);
+      return 0.;
+    }
     case 5:
     {
       if(component == 0)
@@ -81,8 +91,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
 }
 
 template<int dim>
-double FinalSolution<dim>::value(const Point<dim> & p,
-  const unsigned int component) const
+double FinalSolution<dim>::value(const Point<dim> & p, const unsigned int component) const
 {
   switch(parameters.testcase)
   {
@@ -120,8 +129,7 @@ double FinalSolution<dim>::value(const Point<dim> & p,
 }
 
 template<int dim>
-double FinalSolutionVelocity<dim>::value(const Point<dim> & p,
-  const unsigned int component) const
+double FinalSolutionVelocity<dim>::value(const Point<dim> & p, const unsigned int component) const
 {
   switch(parameters.testcase)
   {
@@ -175,8 +183,7 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p,
 }
 
 template<int dim>
-double DirichletFunction<dim>::value(const Point<dim> & p,
-  const unsigned int component) const
+double DirichletFunction<dim>::value(const Point<dim> & p, const unsigned int component) const
 {
   const double t = this->get_time();
   switch(parameters.testcase)
@@ -198,8 +205,7 @@ double DirichletFunction<dim>::value(const Point<dim> & p,
 }
 
 template<int dim>
-double ExactSolution<dim>::value(const Point<dim> & p,
-  const unsigned int component) const
+double ExactSolution<dim>::value(const Point<dim> & p, const unsigned int component) const
 {
   const double t = this->get_time();
 
