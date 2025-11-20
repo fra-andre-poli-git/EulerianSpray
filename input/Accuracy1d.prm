@@ -26,5 +26,5 @@ subsection Operator parameters
 #  local_lax_friedrichs
 #  harten_lax_vanleer
 #  godunov
-  set numerical flux type= godunov
+  set numerical flux type = godunov
 end
