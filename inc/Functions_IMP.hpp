@@ -52,7 +52,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
       if(component == 1)
         return 0.5 * (-0.5) * (p[0]<0.)
           + 0.5 * 0.4 * (p[0]>0.);
-      return 0.;
+      return 0.; 
     }
     case 5:
     {
@@ -63,7 +63,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
       if(component==1)
         return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) 
           - 0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
-      return 0.;
+      return 0.; 
     }
     case 7:
     {
@@ -80,13 +80,11 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
           return 1./100. * (-1./10.) * std::cos(theta);
         if (component == 2) // \rho v
           return 1./100. * (-1./10.) * std::sin(theta);
+        return 0.; // to avoid implicit fallthrough warning
       }
     }
     default:
-    {
       Assert(false, ExcNotImplemented());
-      return 0.;
-    }
   }
 }
 
@@ -95,9 +93,6 @@ double FinalSolution<dim>::value(const Point<dim> & p, const unsigned int compon
 {
   switch(parameters.testcase)
   {
-    case 1:
-
-        
     case 2:
     {
       if(component == 0)
@@ -114,17 +109,8 @@ double FinalSolution<dim>::value(const Point<dim> & p, const unsigned int compon
           + 0.5 * (-0.4) * (p[0]>= 0.6 );
       return 0.;
     }
-    case 3:
-    {
-      return 0.;
-    }
-    case 4:
-    {
-      return 0.;
-    }
     default:
       Assert(false, ExcNotImplemented());
-    return 0.;
   }
 }
 
@@ -133,10 +119,6 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p, const unsigned in
 {
   switch(parameters.testcase)
   {
-    case 1:
-    {
-      return 0.;
-    }
     case 2:
     {
       if(component == 0)
@@ -152,33 +134,8 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p, const unsigned in
           - 0.4 * (p[0]>= 0.6);
       return 0.;
     }
-    case 3:
-    {
-      return 0.;
-    }
-    case 4:
-    {
-      return 0.;
-    }
-    case 5:
-    {
-      return 0.;
-    }
-    case 6:
-    {
-      return 0.;
-    }
-    case 7:
-    {
-      return 0.;
-    }
-    case 8:
-    {
-      return 0.;
-    }
     default:
       Assert(false, ExcNotImplemented());
-    return 0.;
   }
 }
 
@@ -200,7 +157,6 @@ double DirichletFunction<dim>::value(const Point<dim> & p, const unsigned int co
     }
     default:
       Assert(false, ExcNotImplemented());
-    return 0.;
   }
 }
 
@@ -232,19 +188,13 @@ double ExactSolution<dim>::value(const Point<dim> & p, const unsigned int compon
           + 0.5 * (p[0] >= -0.5 + 0.4*t) * (p[0] < 0.4*t)
           + (0.5 / (1.0 - t)) * (p[0] >= 0.4*t) * (p[0] < 0.8 - 0.4*t)
           + 0.5 * (p[0] >= 0.8 - 0.4*t);
-
       if (component == 1) // rho(x,t) * u(x,t)
         return 0.5 *( -0.5) * (p[0] < -0.5 - 0.5*t)
           + 0.0 * (p[0] >= -0.5 - 0.5*t) * (p[0] < -0.5 + 0.4*t)
           + 0.5 * 0.4 * (p[0] >= -0.5 + 0.4*t) * (p[0] < 0.4*t)
           + (0.5 / (1.0 - t)) * ((0.4 - p[0]) / (1.0 - t)) * (p[0] >= 0.4*t) * (p[0] < 0.8 - 0.4*t)
           - 0.5 * 0.4 * (p[0] >= 0.8 - 0.4*t);
-
       return 0.;
-
-    }
-    case 3:
-    {
 
     }
     default:
