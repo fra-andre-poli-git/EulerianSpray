@@ -16,6 +16,8 @@ struct Parameters
   double CFL;
   RungeKuttaScheme scheme;
   NumericalFlux numerical_flux_type;
+  LimiterType limiter_type;
+  double epsilon;
 
   static void declare_parameters(ParameterHandler & prm);
   void parse_parameters(ParameterHandler & prm);

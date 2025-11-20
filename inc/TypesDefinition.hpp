@@ -35,4 +35,10 @@ enum RungeKuttaScheme
   ssp_stage_3_order_3,
 };
 
+enum LimiterType
+{
+  none,
+  bound_preserving
+};
+
 #endif

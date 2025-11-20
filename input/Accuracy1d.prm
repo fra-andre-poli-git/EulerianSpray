@@ -28,3 +28,11 @@ subsection Operator parameters
 #  godunov
   set numerical flux type = godunov
 end
+
+subsection Limiter parameters
+# Options for limiter:
+#  none
+#  bound_preserving
+  set limiter = bound_preserving
+  set epsilon = 1e-13
+end

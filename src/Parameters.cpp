@@ -1,3 +1,4 @@
+#include<map>
 #include"Parameters.hpp"
 
 void Parameters::declare_parameters(ParameterHandler & prm)
@@ -42,7 +43,7 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     prm.declare_entry("CFL",
       "0.1",
       Patterns::Double(0),
-      "CFL myReal");
+      "CFL number");
   }
   prm.leave_subsection();
 
@@ -71,7 +72,22 @@ void Parameters::declare_parameters(ParameterHandler & prm)
       "Type of the numerical flux used between the interfaces of the elements");
   }
   prm.leave_subsection();
+
+  prm.enter_subsection("Limiter parameters");
+  {
+    prm.declare_entry("limiter",
+      "none",
+      Patterns::MultipleSelection("none|"
+        "bound_preserving"),
+      "Type of limiter selected");
+    prm.declare_entry("epsilon",
+      "1e-13",
+      Patterns::Double(),
+      "Numerical tolerance for defining the numerical admissibility region");
+  }
+  prm.leave_subsection();
 }
+
 
 void Parameters::parse_parameters(ParameterHandler & prm)
 {
@@ -90,37 +106,91 @@ void Parameters::parse_parameters(ParameterHandler & prm)
 
   prm.enter_subsection("Integrator parameters");
   {
+
+    static const std::map<std::string, RungeKuttaScheme> scheme_map =
+    {
+      {"lsrk_stage_3_order_3", lsrk_stage_3_order_3},
+      {"lsrk_stage_5_order_4", lsrk_stage_5_order_4},
+      {"lsrk_stage_7_order_4", lsrk_stage_7_order_4},
+      {"lsrk_stage_9_order_5", lsrk_stage_9_order_5},
+      {"forward_euler", forward_euler},
+      {"ssp_stage_2_order_2", ssp_stage_2_order_2},
+      {"ssp_stage_3_order_3", ssp_stage_3_order_3}
+    };
     std::string selected_scheme = prm.get("Runge Kutta scheme");
 
-    // The parser gets a bit cumbersome if I have to deal with enum:
-    // honestly I made ChatGPT write this chain of else if because it was too
-    // boring
-    if (selected_scheme == "lsrk_stage_3_order_3")
-        scheme = lsrk_stage_3_order_3;
-    else if (selected_scheme == "lsrk_stage_5_order_4")
-        scheme = lsrk_stage_5_order_4;
-    else if (selected_scheme == "lsrk_stage_7_order_4")
-        scheme = lsrk_stage_7_order_4;
-    else if (selected_scheme == "lsrk_stage_9_order_5")
-        scheme = lsrk_stage_9_order_5;
-    else if (selected_scheme == "forward_euler")
-        scheme = forward_euler;
-    else if (selected_scheme == "ssp_stage_2_order_2")
-        scheme = ssp_stage_2_order_2;
-    else if (selected_scheme == "ssp_stage_3_order_3")
-        scheme = ssp_stage_3_order_3;
+    auto it = scheme_map.find(selected_scheme);
+    if(it != scheme_map.end())
+      scheme = it->second;
+    else
+      throw std::runtime_error("Unknown Runge Kutta scheme: " + selected_scheme);
+    
+    // // The parser gets a bit cumbersome if I have to deal with enum:
+    // if (selected_scheme == "lsrk_stage_3_order_3")
+    //     scheme = lsrk_stage_3_order_3;
+    // else if (selected_scheme == "lsrk_stage_5_order_4")
+    //     scheme = lsrk_stage_5_order_4;
+    // else if (selected_scheme == "lsrk_stage_7_order_4")
+    //     scheme = lsrk_stage_7_order_4;
+    // else if (selected_scheme == "lsrk_stage_9_order_5")
+    //     scheme = lsrk_stage_9_order_5;
+    // else if (selected_scheme == "forward_euler")
+    //     scheme = forward_euler;
+    // else if (selected_scheme == "ssp_stage_2_order_2")
+    //     scheme = ssp_stage_2_order_2;
+    // else if (selected_scheme == "ssp_stage_3_order_3")
+    //     scheme = ssp_stage_3_order_3;
   }
   prm.leave_subsection();
 
   prm.enter_subsection("Operator parameters");
   {
+    static const std::map<std::string, NumericalFlux> flux_map =
+    {
+      {"local_lax_friedrichs", local_lax_friedrichs},
+      {"harten_lax_vanleer", harten_lax_vanleer},
+      {"godunov", godunov}
+    };
+
     std::string selected_flux = prm.get("numerical flux type");
-    if(selected_flux == "local_lax_friedrichs")
-      numerical_flux_type = local_lax_friedrichs;
-    else if(selected_flux == "harten_lax_vanleer")
-      numerical_flux_type = harten_lax_vanleer;
-    else if(selected_flux == "godunov")
-      numerical_flux_type = godunov;
+
+    auto it = flux_map.find(selected_flux);
+    if(it != flux_map.end())
+      numerical_flux_type = it->second;
+    else
+      throw std::runtime_error("Unknown numerical flux: " + selected_flux);
+    
+    // if(selected_flux == "local_lax_friedrichs")
+    //   numerical_flux_type = local_lax_friedrichs;
+    // else if(selected_flux == "harten_lax_vanleer")
+    //   numerical_flux_type = harten_lax_vanleer;
+    // else if(selected_flux == "godunov")
+    //   numerical_flux_type = godunov;
   }
   prm.leave_subsection();
+
+  prm.enter_subsection("Limiter parameters");
+  {
+    static const std::map<std::string, LimiterType> limiter_map =
+    {
+      {"none", none},
+      {"bound_preserving", bound_preserving}
+    };
+
+    std::string selected_limiter = prm.get("limiter");
+
+    auto it = limiter_map.find(selected_limiter);
+    if (it != limiter_map.end())
+      limiter_type = it->second;
+    else
+      throw std::runtime_error("Unknown limiter: " + selected_limiter);
+    
+
+    // if(selected_limiter == "none")
+    //   limiter_type = none;
+    // else if(selected_limiter == "bound_preserving")
+    //   limiter_type = bound_preserving;
+    
+    epsilon = prm.get_double("epsilon");
+  }
 }
