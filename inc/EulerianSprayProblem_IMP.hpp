@@ -32,7 +32,7 @@ EulerianSprayProblem<dim, degree>::EulerianSprayProblem(
     time(0),
     time_step(0),
     timer(pcout, TimerOutput::never, TimerOutput::wall_times),
-    eulerian_spray_operator(timer){}
+    eulerian_spray_operator(timer, params){}
 
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
@@ -118,7 +118,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
       eulerian_spray_operator.set_1d_in_disguise();
 
       // final_time = parameters.final_time;
@@ -149,7 +148,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
 
       eulerian_spray_operator.set_1d_in_disguise();
 
@@ -170,7 +168,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
       eulerian_spray_operator.set_neumann_boundary(3);
-      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
       final_time = parameters.final_time;
       break;
     }
@@ -186,7 +183,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
       eulerian_spray_operator.set_neumann_boundary(3);
-      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
       final_time = parameters.final_time;
       break;
     }
@@ -201,7 +197,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
       eulerian_spray_operator.set_neumann_boundary(3);
-      eulerian_spray_operator.set_numerical_flux(parameters.numerical_flux_type);
       final_time = parameters.final_time;
       break;
     }

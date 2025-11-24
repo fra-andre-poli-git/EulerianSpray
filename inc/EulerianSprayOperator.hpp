@@ -2,6 +2,7 @@
 #define EULERIAN_SPRAY_OPERATOR_HH
 
 #include"TypesDefinition.hpp"
+#include"Parameters.hpp"
 
 #include<deal.II/matrix_free/matrix_free.h>
 #include<deal.II/base/function.h>
@@ -25,7 +26,7 @@ class EulerianSprayOperator{
     // TODO: capire meglio a che serve timer_output
     
     // Constructor
-    EulerianSprayOperator(TimerOutput & timer_output);
+    EulerianSprayOperator(TimerOutput & timer_output,const Parameters & params);
 
     void reinit(const Mapping<dim> & mapping,
       const DoFHandler<dim> & dof_handler);
@@ -53,12 +54,9 @@ class EulerianSprayOperator{
     std::array<double, 2> compute_errors(const Function<dim> & function,
       const SolutionType & solution) const;
 
-
     double compute_cell_transport_speed(const SolutionType & solution) const;   
 
     void initialize_vector(SolutionType &vector) const;
-
-    void set_numerical_flux(const NumericalFlux &);
 
     void bound_preserving_projection_1d(SolutionType & solution,
       const DoFHandler<dim> & dof_handler,
@@ -82,6 +80,8 @@ class EulerianSprayOperator{
 
     bool get_1d_in_disguise() const {return one_dimensional_in_disguise;};
 
+
+
   private:
     // MatrixFree<dim, myReal> class collects all the data that is stored for
     // the matrix free implementation.
@@ -99,13 +99,15 @@ class EulerianSprayOperator{
 
     TimerOutput & timer;
 
+  public:
+    const Parameters & parameters;
+  private:
+
     // I store the maximum and the minimum of the initial velocity, to be used
     // in the positivity limiter
     myReal max_velocity, min_velocity;
 
     bool one_dimensional_in_disguise = false;
-
-    NumericalFlux numerical_flux_type;
 
     std::map<types::boundary_id, std::unique_ptr<Function<dim>>>
       dirichlet_boundaries;

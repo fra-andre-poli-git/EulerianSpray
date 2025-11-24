@@ -17,7 +17,8 @@
 
 template <int dim, int degree, int n_q_points_1d>
 EulerianSprayOperator<dim, degree, n_q_points_1d>::EulerianSprayOperator(
-  TimerOutput & timer): timer(timer){}
+  TimerOutput & timer, const Parameters & params):
+  timer(timer), parameters(params){}
 
 // For the initialization of the Euler operator, we set up the MatrixFree
 // variable contained in the class. This can be done given a mapping to
@@ -313,13 +314,6 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::initialize_vector(
   data.initialize_dof_vector(vector);
 }
 
-template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayOperator<dim, degree, n_q_points_1d>::set_numerical_flux(
-  const NumericalFlux & flux)
-{
-  numerical_flux_type = flux;
-}
-
 // This function applies the limiter given by Zhang, Shu,
 // "On positivity-preserving high order discontinuous Galerkin schemes for 
 // compressible Euler equations on rectangular meshes", adapted to the
@@ -390,7 +384,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   //-------------------------Modify the solution--------------------------------
   // TODO: this implementation is only for 1D cases, extend it to general dim
   // Set up a small myReal
-  myReal epsilon = 1e-12;
+  // myReal epsilon = 1e-12;
   // Set the quadrature points
   // For the moment I use a quadrature formula only for 1D in disguise
   // since I first test the limiter in 1D cases. TODO: extend it to 2D and
@@ -410,7 +404,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
     cell->get_dof_indices(local_dof_indices);
     myReal cell_average_density = cell_averages[cell_no][0];
     // myReal cell_average_density = 1e-13;
-    if(cell_average_density <= epsilon) // If the density is less than epsilon, set the solution as the average
+    if(cell_average_density <= parameters.epsilon) // If the density is less than epsilon, set the solution as the average
     {
       // Set the mean value as solution
       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)// Loop over DoFs
@@ -444,7 +438,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       // the same but in fact they are numerically different. Also, I could
       // check (TODO) which version runs faster: the one where I use the if or
       // the one where I don't use the if and I run this chunk for all the cells
-      if (rho_min < epsilon)
+      if (rho_min < parameters.epsilon)
       {
         myReal diff_den = cell_average_density - rho_min;
         // std::cout << "Diff den is "<< std::setprecision(std::numeric_limits<double>::max_digits10)<<diff_den<<std::endl;
@@ -460,7 +454,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
         //     theta = diff_num / diff_den;
         // }  
 
-        myReal diff_num = cell_average_density - epsilon;
+        myReal diff_num = cell_average_density - parameters.epsilon;
         myReal theta = diff_num / (diff_den + 1e-14);
 
         // std::cout << "Theta is "<< std::setprecision(std::numeric_limits<double>::max_digits10) << theta << std::endl;
@@ -479,7 +473,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
               (1.-theta) * cell_averages[cell_no][comp_i] +
               theta * (solution(local_dof_indices[i]));
             // std::cout<< "New density is "<< std::setprecision(std::numeric_limits<double>::max_digits10) << solution(local_dof_indices[i])<<std::endl;
-            if(solution(local_dof_indices[i]) <= epsilon)
+            if(solution(local_dof_indices[i]) <= parameters.epsilon)
             {
               std::cerr<<"The new density is less than epsilon"<<std::endl;
               //std::cerr<<"Theta is "<<theta<<", average is "<<cell_averages[cell_no][comp_i] << ", new solution is " << solution(local_dof_indices[i])<<std::endl;
@@ -510,7 +504,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           mean_w[n] = cell_averages[cell_no][n]; 
         }
         double diff_den=(mean_w - state_q).norm();
-        if(diff_den< epsilon/2)
+        if(diff_den< parameters.epsilon/2)
           // std::cout << "Min velocity: " << min_velocity << " Max velocity: " << max_velocity << " velocity "
           theta_i_j = 1.;
         else
@@ -521,7 +515,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           // mean_velocity = eulerian_spray_velocity<dim>(mean_w); /// ATTENZIONE la velocità media non è la divisione tra quantità di moto media e densità media 
 
           dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
-            epsilon, min_velocity, max_velocity);
+            parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           // std::cout << "The value in the dof is q =[ "<<state_q[0]<< " "<<state_q[1]<<" "<< state_q[2] << "]"<<std::endl;
           // std::cout << "The value in of the mean is w =[ "<<mean_w[0]<< " "<<mean_w[1]<<" "<< mean_w[2] << "]"<<std::endl;
@@ -641,7 +635,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   //-------------------------Modify the solution--------------------------------
   // TODO: this implementation is only for 1D cases, extend it to general dim
   // Set up a small myReal
-  myReal epsilon = 1e-13;
+  // myReal epsilon = 1e-13;
   // Set the quadrature points
   // For the moment I use a quadrature formula only for 1D in disguise
   // since I first test the limiter in 1D cases. TODO: extend it to 2D and
@@ -665,7 +659,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
     unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
     myReal cell_average_density = cell_averages[cell_no][0];
-    if(cell_average_density <= epsilon)
+    if(cell_average_density <= parameters.epsilon)
     {
       // Set the mean value as solution
       // Loop over DoFs
@@ -695,9 +689,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       // fe_values_y[density].get_function_values(solution, density_values);
       // for(unsigned int q=0; q<n_q_points; ++q)
       //   rho_min = std::min(rho_min, density_values[q]);
-      if(rho_min < epsilon)
+      if(rho_min < parameters.epsilon)
       {        
-        myReal diff_num = std::abs(cell_average_density - epsilon);
+        myReal diff_num = std::abs(cell_average_density - parameters.epsilon);
         myReal diff_den = std::abs(cell_average_density - rho_min);
         myReal theta = 1.0;
         if(diff_den < 1e-12)
@@ -741,7 +735,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)
         auto s = find_intersection_1d( state_velocity, mean_velocity,
-          epsilon, min_velocity, max_velocity);
+          parameters.epsilon, min_velocity, max_velocity);
         // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
         myReal theta_i_j = (mean_velocity - s).norm() / (mean_velocity - state_velocity).norm();
         theta_j = std::min( theta_j, theta_i_j);
@@ -997,7 +991,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_face(
         eulerian_spray_numerical_flux<dim>(phi_m.get_value(q),
           phi_p.get_value(q),
           phi_m.get_normal_vector(q),
-          numerical_flux_type);
+          parameters.numerical_flux_type);
       phi_m.submit_value(-numerical_flux, q);
       phi_p.submit_value(numerical_flux, q);
     }
@@ -1046,7 +1040,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::local_apply_boundary_fac
       auto flux = eulerian_spray_numerical_flux<dim>(w_m,
         w_p,
         normal,
-        numerical_flux_type);
+        parameters.numerical_flux_type);
 
       phi.submit_value(-flux, q);
     }

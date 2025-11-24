@@ -18,7 +18,7 @@ class RungeKuttaIntegrator
       VectorType &    solution,
       VectorType &    vec_ri,
       VectorType &    vec_ki,
-      // These three are needed for the limiter
+      // These are needed for the limiter
       const DoFHandler<dim> & dof_handler,
       const MappingQ1<dim> & mapping,
       const FESystem<dim> & fe) const = 0 ;
