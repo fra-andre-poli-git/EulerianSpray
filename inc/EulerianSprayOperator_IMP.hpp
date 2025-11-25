@@ -332,28 +332,83 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   // QGauss<dim>   quadrature_formula(
   //   static_cast<unsigned int>(std::ceil((fe.degree + 1)/2.)));
   QGauss<dim>   quadrature_formula(fe.degree+1);
-  unsigned int n_q_points = quadrature_formula.size();
+  unsigned int n_q_points_average = quadrature_formula.size();
   FEValues<dim> fe_values (mapping,
     fe,
     quadrature_formula,
     update_values | update_JxW_values);
-  std::vector<dealii::Vector<myReal>> local_solution_values(n_q_points,
+  std::vector<dealii::Vector<myReal>> local_solution_values(n_q_points_average,
     dealii::Vector<myReal>(dim+1));
   // Loop over active cells
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
     endc = dof_handler.end();
+  typename DoFHandler<dim>::active_cell_iterator initial_iterator = cell;
   // TODO: this loop may not be very efficient since I do not access cell_averages
   // sequentially
-  for(; cell!=endc; ++cell) // Compute cell average
+  // for(; cell!=endc; ++cell) // Compute cell average
+  // {
+  //   unsigned int cell_no = cell->active_cell_index();
+  //   fe_values.reinit(cell);
+  //   fe_values.get_function_values(solution, local_solution_values);
+  //   for(unsigned int d=0; d < dim + 1; ++d)
+  //     cell_averages[cell_no][d] = 0.;
+  //   cell_average_x_velocities[cell_no] = 0.;
+  //   for(unsigned int q=0; q<n_q_points_average; ++q)
+  //   {
+  //     cell_average_x_velocities[cell_no] += local_solution_values[q][1] /
+  //       local_solution_values[q][0];
+  //     for(unsigned int d=0; d<dim+1; ++d)
+  //       cell_averages[cell_no][d] += local_solution_values[q][d]*
+  //         fe_values.JxW(q);
+  //   }
+  //   cell_average_x_velocities[cell_no] /= cell->measure();
+  //   // Assert((cell_average_x_velocities[cell_no] <= max_velocity ) &&
+  //   //       (cell_average_x_velocities[cell_no] >= min_velocity ),
+  //   //       ExcMessage("Error: average velocity exceeds realizability bounds"
+  //   //        + std::to_string(cell_average_x_velocities[cell_no])
+  //   //        + " is indeed greater than " + std::to_string(max_velocity)
+  //   //        + "or smaller than " + std::to_string(min_velocity)));
+  //   for(unsigned int d=0; d<dim+1; ++d)
+  //   {
+  //     cell_averages[cell_no][d] /= cell->measure();
+  //     if(d == 0)
+  //       Assert(cell_averages[cell_no][d] >= 0.0,
+  //         ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_averages[cell_no][d])));
+  //     // if(d == 1)
+  //     //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
+  //     //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
+  //     //     ExcMessage("Error: average momentum exceeds realizability bounds"));
+  //   }
+  // }
+
+  //-------------------------Modify the solution--------------------------------
+  // Set up a small myReal
+  // myReal epsilon = 1e-12;
+  // Set the quadrature points
+  // For the moment I use a quadrature formula only for 1D in disguise
+  // since I first test the limiter in 1D cases. TODO: extend it to 2D and
+  // if possible to 3D eventually.
+  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  // I use the brace initialization since the compiler complaints, using a
+  // function definition
+  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
+  FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
+  unsigned int n_q_points = quadrature_x.size();
+  // Loop over cells
+  cell = initial_iterator;
+  std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
+  for (; cell!=endc; ++cell) // Loop over all cells
   {
+
+
     unsigned int cell_no = cell->active_cell_index();
     fe_values.reinit(cell);
     fe_values.get_function_values(solution, local_solution_values);
-    for(unsigned int d; d < dim + 1; ++d)
+    for(unsigned int d=0; d < dim + 1; ++d)
       cell_averages[cell_no][d] = 0.;
     cell_average_x_velocities[cell_no] = 0.;
-    for(unsigned int q=0; q<n_q_points; ++q)
+    for(unsigned int q=0; q<n_q_points_average; ++q)
     {
       cell_average_x_velocities[cell_no] += local_solution_values[q][1] /
         local_solution_values[q][0];
@@ -379,28 +434,45 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
       //     ExcMessage("Error: average momentum exceeds realizability bounds"));
     }
-  }
 
-  //-------------------------Modify the solution--------------------------------
-  // TODO: this implementation is only for 1D cases, extend it to general dim
-  // Set up a small myReal
-  // myReal epsilon = 1e-12;
-  // Set the quadrature points
-  // For the moment I use a quadrature formula only for 1D in disguise
-  // since I first test the limiter in 1D cases. TODO: extend it to 2D and
-  // if possible to 3D eventually.
-  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
-  // I use the brace initialization since the compiler complaints, using a
-  // function definition
-  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
-  FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
-  n_q_points = quadrature_x.size();
-  // Loop over cells
-  cell = dof_handler.begin_active();
-  std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
-  for (; cell!=endc; ++cell) // Loop over all cells
-  {
-    unsigned int cell_no = cell->active_cell_index();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //  unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
     myReal cell_average_density = cell_averages[cell_no][0];
     // myReal cell_average_density = 1e-13;
@@ -606,9 +678,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
     endc = dof_handler.end();
+  typename DoFHandler<dim>::active_cell_iterator initial_iterator = cell;
   // TODO: this loop may not be very efficient since I do not access cell_averages
   // sequentially
-  typename DoFHandler<dim>::active_cell_iterator initial_iterator = cell;
   for(; cell!=endc; ++cell)
   {
     // Compute cell average
@@ -625,31 +697,26 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       if(d == 0)
         Assert(cell_averages[cell_no][d] >= 0.0,
           ExcMessage("Error: average density is negative"));
-      if(d == 1)
-        Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
-          (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
-          ExcMessage("Error: average velocity exceeds realizability bounds"));
+      // TODO: modify this control for physical dimension 2 and 3
+      // if(d == 1)
+      //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
+      //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
+      //     ExcMessage("Error: average velocity exceeds realizability bounds"));
     }
   }
 
   //-------------------------Modify the solution--------------------------------
-  // TODO: this implementation is only for 1D cases, extend it to general dim
-  // Set up a small myReal
-  // myReal epsilon = 1e-13;
   // Set the quadrature points
-  // For the moment I use a quadrature formula only for 1D in disguise
-  // since I first test the limiter in 1D cases. TODO: extend it to 2D and
-  // if possible to 3D eventually.
+  // Number of points needed for Gauss-Lobatto
   unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
-  // In 1d in disguise case I could use L = 1, since the solution should depend
-  // only on x
-  //unsigned int L = degree + 1;
+  // Number of points needed for Gauss
+  unsigned int L = degree + 1;
   // I use the brace initialization since the compiler complaints, using a
   // function definition
-  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
-  // Quadrature<dim> quadrature_y { QGauss<1>(L), QGaussLobatto<1>(M)};
+  Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(L)};
+  Quadrature<dim> quadrature_y { QGauss<1>(L), QGaussLobatto<1>(M)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
-  // FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
+  FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
   n_q_points = quadrature_x.size();
   // Loop over cells
   cell = initial_iterator;
@@ -678,7 +745,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
 
       // Modify the density
       fe_values_x.reinit(cell);
-      // fe_values_y.reinit(cell); 
+      fe_values_y.reinit(cell); 
       std::vector<myReal> density_values(n_q_points);
       const FEValuesExtractors::Scalar density(0);
       myReal rho_min = std::numeric_limits<myReal>::max();
@@ -686,17 +753,17 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       fe_values_x[density].get_function_values(solution, density_values);
       for(unsigned int q=0; q<n_q_points; ++q)
         rho_min = std::min(rho_min, density_values[q]);
-      // fe_values_y[density].get_function_values(solution, density_values);
-      // for(unsigned int q=0; q<n_q_points; ++q)
-      //   rho_min = std::min(rho_min, density_values[q]);
+      fe_values_y[density].get_function_values(solution, density_values);
+      for(unsigned int q=0; q<n_q_points; ++q)
+        rho_min = std::min(rho_min, density_values[q]);
       if(rho_min < parameters.epsilon)
       {        
         myReal diff_num = std::abs(cell_average_density - parameters.epsilon);
         myReal diff_den = std::abs(cell_average_density - rho_min);
         myReal theta = 1.0;
-        if(diff_den < 1e-12)
-          std::cout<<"Warning in density modification: you are dividing for a small myReal"<<std::endl;
-        theta = diff_num / diff_den;
+        // if(diff_den < 1e-12)
+        //   std::cout<<"Warning in density modification: you are dividing for a small myReal"<<std::endl;
+        theta = diff_num / (diff_den + 1e-14);
         Assert(theta >= 0.0 && theta <= 1.0,
           ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
@@ -708,7 +775,6 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
             theta * 
             (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
-
         }
       }
       
