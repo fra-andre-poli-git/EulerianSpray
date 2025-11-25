@@ -322,13 +322,14 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::initialize_vector(
 template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping, const FESystem<dim> & fe) const
 {
-
-  //-------------------------Compute cell averages------------------------------
+  // I create the vector to store cell averages and I initialize it
   std::vector< dealii::Vector<myReal>> cell_averages;
   cell_averages.assign(dof_handler.get_triangulation().n_active_cells(),
     dealii::Vector<myReal>(dim+1));
+  // This vector is to store the averages of the velocities
   std::vector<myReal> cell_average_x_velocities(
     dof_handler.get_triangulation().n_active_cells());
+  // I define the quadrature formula for the computation of the average
   // QGauss<dim>   quadrature_formula(
   //   static_cast<unsigned int>(std::ceil((fe.degree + 1)/2.)));
   QGauss<dim>   quadrature_formula(fe.degree+1);
@@ -339,53 +340,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
     update_values | update_JxW_values);
   std::vector<dealii::Vector<myReal>> local_solution_values(n_q_points_average,
     dealii::Vector<myReal>(dim+1));
-  // Loop over active cells
-  typename DoFHandler<dim>::active_cell_iterator
-    cell = dof_handler.begin_active(),
-    endc = dof_handler.end();
-  typename DoFHandler<dim>::active_cell_iterator initial_iterator = cell;
-  // TODO: this loop may not be very efficient since I do not access cell_averages
-  // sequentially
-  // for(; cell!=endc; ++cell) // Compute cell average
-  // {
-  //   unsigned int cell_no = cell->active_cell_index();
-  //   fe_values.reinit(cell);
-  //   fe_values.get_function_values(solution, local_solution_values);
-  //   for(unsigned int d=0; d < dim + 1; ++d)
-  //     cell_averages[cell_no][d] = 0.;
-  //   cell_average_x_velocities[cell_no] = 0.;
-  //   for(unsigned int q=0; q<n_q_points_average; ++q)
-  //   {
-  //     cell_average_x_velocities[cell_no] += local_solution_values[q][1] /
-  //       local_solution_values[q][0];
-  //     for(unsigned int d=0; d<dim+1; ++d)
-  //       cell_averages[cell_no][d] += local_solution_values[q][d]*
-  //         fe_values.JxW(q);
-  //   }
-  //   cell_average_x_velocities[cell_no] /= cell->measure();
-  //   // Assert((cell_average_x_velocities[cell_no] <= max_velocity ) &&
-  //   //       (cell_average_x_velocities[cell_no] >= min_velocity ),
-  //   //       ExcMessage("Error: average velocity exceeds realizability bounds"
-  //   //        + std::to_string(cell_average_x_velocities[cell_no])
-  //   //        + " is indeed greater than " + std::to_string(max_velocity)
-  //   //        + "or smaller than " + std::to_string(min_velocity)));
-  //   for(unsigned int d=0; d<dim+1; ++d)
-  //   {
-  //     cell_averages[cell_no][d] /= cell->measure();
-  //     if(d == 0)
-  //       Assert(cell_averages[cell_no][d] >= 0.0,
-  //         ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_averages[cell_no][d])));
-  //     // if(d == 1)
-  //     //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
-  //     //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
-  //     //     ExcMessage("Error: average momentum exceeds realizability bounds"));
-  //   }
-  // }
 
-  //-------------------------Modify the solution--------------------------------
-  // Set up a small myReal
-  // myReal epsilon = 1e-12;
-  // Set the quadrature points
+  // Set the quadrature points for the projection
   // For the moment I use a quadrature formula only for 1D in disguise
   // since I first test the limiter in 1D cases. TODO: extend it to 2D and
   // if possible to 3D eventually.
@@ -395,13 +351,18 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   Quadrature<dim> quadrature_x {QGaussLobatto<1>(M), QGauss<1>(1)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
   unsigned int n_q_points = quadrature_x.size();
-  // Loop over cells
-  cell = initial_iterator;
+
   std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
-  for (; cell!=endc; ++cell) // Loop over all cells
+
+  // Define the iterators for the loop
+  typename DoFHandler<dim>::active_cell_iterator
+    cell = dof_handler.begin_active(),
+    endc = dof_handler.end();
+  // TODO: this loop may not be very efficient since I do not access cell_averages
+  // sequentially
+  for (; cell!=endc; ++cell) // Loop over active cells
   {
-
-
+//-------------------------Compute cell averages--------------------------------
     unsigned int cell_no = cell->active_cell_index();
     fe_values.reinit(cell);
     fe_values.get_function_values(solution, local_solution_values);
@@ -435,43 +396,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       //     ExcMessage("Error: average momentum exceeds realizability bounds"));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//-------------------------Modify the solution----------------------------------
   //  unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
     myReal cell_average_density = cell_averages[cell_no][0];
@@ -551,7 +476,6 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
               //std::cerr<<"Theta is "<<theta<<", average is "<<cell_averages[cell_no][comp_i] << ", new solution is " << solution(local_dof_indices[i])<<std::endl;
               //std::exit(1);
             }
-
           }  
         }
       }
