@@ -15,11 +15,11 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(
   const myReal & a,
   const myReal & b);
 
-template<int dim> double find_intersection(
+template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   dealii::Tensor<1, dim, myReal>  q,
   dealii::Tensor<1, dim, myReal>  w,
   double epsilon,
-  double s);
+  double S /* max velocity norm*/);
   
 #include "FindIntersection_IMP.hpp"
 #endif

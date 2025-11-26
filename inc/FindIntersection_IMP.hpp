@@ -30,7 +30,8 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(const deal
 
   double edge = above ? b + epsilon : a - epsilon;
 
-  auto f = [&](double t)->double {
+  auto f = [&](double t)->double
+  {
     // const myReal rho = w[0] + t*(q[0] - w[0]);
     // const myReal m   = w[1] + t*(q[1] - w[1]);
     const myReal rho = (1.-t) * w[0] + t * q[0];
@@ -56,13 +57,13 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(const deal
   }
   // Assert(f0 * f1 <= 0.0,
   //         ExcMessage("Problem inside FindIntersection: cell average results outside the realizability boundary"));
-  // else // therefore (f0 * f1 <= 0.0) 
+  else // therefore (f0 * f1 <= 0.0) 
   {
     for (int it=0; it<max_it; ++it)
     {
       tm = 0.5*(t0 + t1);
       fm = f(tm);
-      if ((t1 - t0)*0.5 < tol )
+      if ( (t1 - t0)*0.5 < tol )
       {
         // t = tm;
         break;
@@ -89,13 +90,64 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(const deal
   return (1-tm) * w + tm * q;
 }
 
-template<int dim> double find_intersection(
+template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   dealii::Tensor<1, dim, myReal> q,
   dealii::Tensor<1, dim, myReal> w,
   double epsilon,
-  double s)
-{
-  double theta = 1.0;
+  double S /* max velocity norm*/)
+{ 
+  double frontier = (S + epsilon)*(S + epsilon)*q[0]*q[0];
+  {
+    double velocity_norm = 0;
+    for(d = 1; d <=dim; ++d)
+      velocity_norm += (q[d]*q[d]);
+    if( velocity_norm <= frontier)
+      return q;
+  }
+  auto f = [&](double t)->double
+  {
+    const auto s = (1.-t) * w + t * q;
+    double velocity_norm = 0;
+    for(d = 1; d <=dim; ++d)
+      velocity_norm += (s[d]*s[d]);
 
-  return theta;
+    return velocity_norm - frontier;
+  };
+
+  double t0 = 0., t1 = 1.;
+  double f0 = f(t0), f1 = f(t1);
+
+  const int max_it = 100;
+  const double tol = 1e-14;
+  double tm, fm;
+
+  if(f0 * f1 > 0.) //if both actual velocity and mean velocity are outside the admissibility region
+    return w; // i choose s as the average solution
+  else // otherwise I go on with bisection
+  {
+    for(int it = 0; it < max_it; ++it)
+    {
+      tm = 0.5 * (t0 + t1);
+      fm = f(tm);
+      if( (t1 - t0)*0.5 < tol)
+        break;
+      if( f0 * fm <= 0.)
+      {
+        t1 = tm;
+        f1 = fm;
+      }
+      else
+      {
+        t0 = tm;
+        f0 = fm;
+      }
+      if(it+1 == max_it)
+        std::cout<<"Warning in FindIntersection: bisection method has not converged"<<std::endl;
+    }
+  }
+  
+  Assert( tm >= 0.0 && tm <= 1.0,
+          ExcMessage("Problem in bisection for the research of s: t is "+ std::to_string(tm)));
+  
+  return (1-tm) * w + tm * q;
 }
