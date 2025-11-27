@@ -591,7 +591,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   // QGauss<dim>   quadrature_formula(
   //   static_cast<unsigned int>(std::ceil((fe.degree + 1)/2.)));
   QGauss<dim>   quadrature_formula(fe.degree+1);
-  unsigned int n_q_points_avrerage = quadrature_formula.size();
+  unsigned int n_q_points_average = quadrature_formula.size();
   FEValues<dim> fe_values (mapping,
     fe,
     quadrature_formula,
@@ -639,7 +639,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
   Quadrature<dim> quadrature_y { QGauss<1>(L), QGaussLobatto<1>(M)};
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
   FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
-  n_q_points = quadrature_x.size();
+  unsigned n_q_points = quadrature_x.size();
   
   std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
     // TODO: this loop may not be very efficient since I do not access cell_averages
@@ -689,7 +689,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
 
 
 
-    unsigned int cell_no = cell->active_cell_index();
+    // unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
     myReal cell_average_density = cell_averages[cell_no][0];
     if(cell_average_density <= parameters.epsilon)
@@ -776,27 +776,27 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           " must be between 0 and 1"));
       }
 
-      // fe_values_y.get_function_values(solution, solution_values);
-      // for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
-      // {
-      //   // Here I find s, the intersection between q - \line{w} and
-      //   // \partial G_\epsilon and then 
-      //   for(size_t n = 0; n < dim + 1; ++n)
-      //   {
-      //     state_q[n] = solution_values[x_i][n];
-      //     mean_w[n] = cell_averages[cell_no][n];
-      //   }
-      //   // Compare theta^i_j with theta_j and set 
-      //   // theta_j = min(theta_j, theta^i_j)
-      //   auto s = find_intersection_1d( state_q, mean_w,
-      //     epsilon, min_velocity, max_velocity);
-      //   // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
-      //   myReal theta_i_j = (mean_w - s).norm() / (mean_w - state_q).norm();
-      //   theta_j = std::min( theta_j, theta_i_j);
-      //   Assert(theta_j >= 0.0 && theta_j <= 1.0,
-      //     ExcMessage("theta_j = "+ std::to_string(theta_j) +
-      //     " must be between 0 and 1"));
-      // }
+      fe_values_y.get_function_values(solution, solution_values);
+      for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
+      {
+        // Here I find s, the intersection between q - \line{w} and
+        // \partial G_\epsilon and then 
+        for(size_t n = 0; n < dim + 1; ++n)
+        {
+          state_q[n] = solution_values[x_i][n];
+          mean_w[n] = cell_averages[cell_no][n];
+        }
+        // Compare theta^i_j with theta_j and set 
+        // theta_j = min(theta_j, theta^i_j)
+        auto s = find_intersection_1d( state_q, mean_w,
+          parameters.epsilon, min_velocity, max_velocity);
+        // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
+        myReal theta_i_j = (mean_w - s).norm() / (mean_w - state_q).norm();
+        theta_j = std::min( theta_j, theta_i_j);
+        Assert(theta_j >= 0.0 && theta_j <= 1.0,
+          ExcMessage("theta_j = "+ std::to_string(theta_j) +
+          " must be between 0 and 1"));
+      }
 
       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
       {

@@ -99,7 +99,7 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   double frontier = (S + epsilon)*(S + epsilon)*q[0]*q[0];
   {
     double velocity_norm = 0;
-    for(d = 1; d <=dim; ++d)
+    for(unsigned d = 1; d < dim; ++d)
       velocity_norm += (q[d]*q[d]);
     if( velocity_norm <= frontier)
       return q;
@@ -108,7 +108,7 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   {
     const auto s = (1.-t) * w + t * q;
     double velocity_norm = 0;
-    for(d = 1; d <=dim; ++d)
+    for(unsigned d = 1; d < dim; ++d)
       velocity_norm += (s[d]*s[d]);
 
     return velocity_norm - frontier;
