@@ -320,7 +320,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::initialize_vector(
 // pressureless gas dynamics system of equations.
 // This implementation is tied to Lagrange basis functions on quadrilaterals
 template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping, const FESystem<dim> & fe) const
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::
+bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping, const FESystem<dim> & fe) const
 {
   // I create the vector to store cell averages and I initialize it
   std::vector< dealii::Vector<myReal>> cell_averages;
@@ -492,8 +493,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       fe_values_x.get_function_values(solution, solution_values);
       for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
       {
-        // Here I find s, the intersection between q - \line{w} and
-        // \partial G_\epsilon and then 
+ 
         for(size_t n = 0; n < 2; ++n)
         {
           state_q[n] = solution_values[x_i][n];
@@ -509,7 +509,9 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
           
           // state_velocity = eulerian_spray_velocity<dim>(state_q);
           // mean_velocity = eulerian_spray_velocity<dim>(mean_w); /// ATTENZIONE la velocità media non è la divisione tra quantità di moto media e densità media 
-
+          
+          // Here I find s, the intersection between q - \line{w} and
+          // \partial G_\epsilon and then
           dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
             parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
@@ -581,7 +583,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
 // This is the two dimension version of the previous one. For the moment I am
 // supposing the physical dimension is 2, I may extend it to 3d later 
 template<int dim, int degree, int n_q_points_1d>
-void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping,const FESystem<dim> & fe) const
+void EulerianSprayOperator<dim, degree, n_q_points_1d>::
+bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping,const FESystem<dim> & fe) const
 {
 
   //-------------------------Compute cell averages------------------------------
@@ -745,7 +748,8 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       }
       
       // Modify the velocity
-      myReal theta_j = 1.0;
+      myReal theta_j = 2.0;
+      myReal theta_i_j = 2.0;   
       dealii::Tensor<1, dim  + 1, myReal> state_q, mean_w;
       dealii::Tensor<1, dim, myReal> state_velocity, mean_velocity;
       std::vector<dealii::Vector<myReal>> solution_values(n_q_points,
@@ -755,22 +759,33 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       fe_values_x.get_function_values(solution, solution_values);
       for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
       {
-        // Here I find s, the intersection between q - \line{w} and
-        // \partial G_\epsilon and then 
+
         for(size_t n = 0; n < dim + 1; ++n)
         {
           state_q[n] = solution_values[x_i][n];
           mean_w[n] = cell_averages[cell_no][n];
         }
-        state_velocity = eulerian_spray_velocity<dim>(state_q);
-        mean_velocity = eulerian_spray_velocity<dim>(mean_w);
+        // state_velocity = eulerian_spray_velocity<dim>(state_q);
+        // mean_velocity = eulerian_spray_velocity<dim>(mean_w);
+        double diff_den=(mean_w - state_q).norm();
+        if(diff_den < parameters.epsilon/2)
+          theta_i_j = 1.;
+        else
+        {
+          // Here I find s, the intersection between q - \line{w} and
+          // \partial G_\epsilon and then
+          auto s = find_intersection( state_q, mean_w,
+            parameters.epsilon, max_velocity);
+        
+          // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
+          theta_i_j = (mean_w - s).norm() / diff_den;
+
+        }
+
         // Compare theta^i_j with theta_j and set 
-        // theta_j = min(theta_j, theta^i_j)
-        auto s = find_intersection( state_velocity, mean_velocity,
-          parameters.epsilon, max_velocity);
-        // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
-        myReal theta_i_j = (mean_velocity - s).norm() / (mean_velocity - state_velocity).norm();
+        // theta_j = min(theta_j, theta^i_j)  
         theta_j = std::min( theta_j, theta_i_j);
+
         Assert(theta_j >= 0.0 && theta_j <= 1.0,
           ExcMessage("theta_j = "+ std::to_string(theta_j) +
           " must be between 0 and 1"));
@@ -779,19 +794,28 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::bound_preserving_project
       fe_values_y.get_function_values(solution, solution_values);
       for(unsigned int x_i=0; x_i < n_q_points; ++x_i)
       {
-        // Here I find s, the intersection between q - \line{w} and
-        // \partial G_\epsilon and then 
+
         for(size_t n = 0; n < dim + 1; ++n)
         {
           state_q[n] = solution_values[x_i][n];
           mean_w[n] = cell_averages[cell_no][n];
         }
+
+        double diff_den=(mean_w - state_q).norm();
+        if(diff_den < parameters.epsilon/2)
+          theta_i_j = 1.;
+        else
+        {
+
+          // Here I find s, the intersection between q - \line{w} and
+          // \partial G_\epsilon and then 
+          auto s = find_intersection_1d( state_q, mean_w,
+            parameters.epsilon, min_velocity, max_velocity);
+          // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
+          theta_i_j = (mean_w - s).norm() / diff_den;
+        }
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)
-        auto s = find_intersection_1d( state_q, mean_w,
-          parameters.epsilon, min_velocity, max_velocity);
-        // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
-        myReal theta_i_j = (mean_w - s).norm() / (mean_w - state_q).norm();
         theta_j = std::min( theta_j, theta_i_j);
         Assert(theta_j >= 0.0 && theta_j <= 1.0,
           ExcMessage("theta_j = "+ std::to_string(theta_j) +
