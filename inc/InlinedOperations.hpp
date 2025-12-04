@@ -80,12 +80,12 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, myReal> & w_minus,
     case local_lax_friedrichs:
     {
       // According to ... Forcella? TODO add reference
-      // auto v_p_times_n = (velocity_plus * normal);
-      // auto v_m_times_n = (velocity_minus * normal);
-      // const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
+      auto v_p_times_n = (velocity_plus * normal);
+      auto v_m_times_n = (velocity_minus * normal);
+      const auto delta = std::max(abs(v_p_times_n) , abs(v_m_times_n));
 
       // This is according to step 67
-      const auto delta = std::max(velocity_plus.norm(), velocity_minus.norm());
+      // const auto delta = std::max(velocity_plus.norm(), velocity_minus.norm());
 
       return 0.5 * (flux_minus * normal + flux_plus * normal) +
         0.5 * delta * (w_minus - w_plus);
@@ -140,7 +140,7 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, myReal> & w_minus,
           const myReal rho_p_sqrt = std::sqrt(density_plus);
           const myReal u_delta = ((rho_m_sqrt * normal_velocity_minus +
             rho_p_sqrt * normal_velocity_plus)/(rho_m_sqrt + rho_p_sqrt));
-          if(u_delta[v] >= 0)
+          if(u_delta[v] > 0)
           {
             auto normal_flux = flux_minus*normal;
             for(unsigned int d=0; d<dim+1; ++d)

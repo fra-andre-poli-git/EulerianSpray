@@ -204,6 +204,13 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     //   // else
     //     // pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
     // }
+    if(pde_operator.parameters.limiter_type == bound_preserving)
+    {
+      if(pde_operator.get_1d_in_disguise())
+        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+      else
+        pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    }
   }
 }
 

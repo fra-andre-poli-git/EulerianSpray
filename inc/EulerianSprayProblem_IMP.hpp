@@ -93,8 +93,6 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
         Point<dim>(-1,0),
         Point<dim>(1,0.1),
         true);
-
-      // TODO: put an if if I am using parallel::distributed::triangulation
       
       // These three lines make a periodicity constraint on top and bottom
       // boundaries. Periodicity constraint works marking the periodic faces
@@ -179,6 +177,30 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
         -0.5,
         0.5,
         true);
+
+//       #ifdef DEAL_II_WITH_P4EST
+//       std::vector<GridTools::PeriodicFacePair<
+//         typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
+// #else
+//       std::vector<GridTools::PeriodicFacePair<
+//       typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+// #endif
+
+//       GridTools::collect_periodic_faces(triangulation,
+//         0,    // boundary_id left
+//         1,    // boundary_id right
+//         0,    // direction x
+//         periodicity_vector);
+
+//       GridTools::collect_periodic_faces(triangulation,
+//         2, // boundary_id bottom
+//         3, // boundary_id top
+//         1, // direction y
+//         periodicity_vector);
+
+//       triangulation.add_periodicity(periodicity_vector);
+
+
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_neumann_boundary(2);
@@ -200,6 +222,24 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
+    case 9:
+    {
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      final_time = parameters.final_time;
+      break;
+    }
+    case 10:
+    {
+
+    }
     // Taylor-Green vortices
     case 11:
     {
@@ -212,7 +252,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
   eulerian_spray_operator.reinit(mapping, dof_handler);
   eulerian_spray_operator.initialize_vector(solution);
 
-  std::cout<< "myReal of degrees of freedom "<<dof_handler.n_dofs()
+  std::cout<< "Number of degrees of freedom "<<dof_handler.n_dofs()
             << " ( = " << (dim + 1) << " [vars] x "
             << triangulation.n_global_active_cells() << " [cells] x "
             << Utilities::pow(degree + 1, dim) << " [dofs/cell/var] )"

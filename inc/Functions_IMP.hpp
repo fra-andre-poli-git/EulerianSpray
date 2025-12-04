@@ -83,6 +83,47 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
         return 0.; // to avoid implicit fallthrough warning
       }
     }
+    case 8:
+    {
+      if(component == 0)
+        return 1./10.;
+      if(component == 1)
+        return 1./10. * 0.25 * (1. - 2. * (p[0]>0));
+      if(component == 2)
+        return 1./10. * 0.25 * (1. - 2. * (p[1]>0));
+      return 0.; // to avoid implicit fallthrough warning
+    }
+    case 9:
+    {
+      if(component == 0)
+        return 1./100.;
+      else
+      {
+        double r = std::sqrt(p[0]*p[0] + p[1]*p[1]);
+        double theta = std::acos(p[0]/r);
+        if (p[1] < 0.)
+          theta = 2. * M_PI - theta;
+        if(r < 0.3)
+        {
+          if(component == 1)
+            return 1./100. * std::cos(theta);
+          if(component == 2)
+            return 1./100. * std::sin(theta);
+        }
+        else
+        {
+          if(component == 1)
+            return - 1./100. * 1./2. * std::cos(theta);
+          if(component == 2)
+            return - 1./100. * 1./2. * std::sin(theta);
+        }
+      }
+      return 0.; // to avoid implicit fallthrough warning
+    }
+    case 10:
+    {
+   
+    }
     default:
       Assert(false, ExcNotImplemented());
   }
