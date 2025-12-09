@@ -177,13 +177,22 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const MappingQ1<dim> & mapping,
   const FESystem<dim> & fe) const
 {
-  if(pde_operator.parameters.limiter_type == bound_preserving)
-  {
-    if(pde_operator.get_1d_in_disguise())
-      pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+  const bool do_limiter = (pde_operator.parameters.limiter_type == bound_preserving);
+  const bool is_1d = pde_operator.get_1d_in_disguise();
+  std::function<void(SolutionType&)> apply_limiter;
+
+  if (do_limiter)
+    if (is_1d)
+      apply_limiter = [&](SolutionType &s){ pde_operator.bound_preserving_projection_1d(s, dof_handler, mapping, fe); };
     else
-      pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
-  }
+      apply_limiter = [&](SolutionType &s){ pde_operator.bound_preserving_projection(s, dof_handler, mapping, fe); };
+  // if(pde_operator.parameters.limiter_type == bound_preserving)
+  // {
+  //   if(pde_operator.get_1d_in_disguise())
+  //     pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+  //   else
+  //     pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+  // }
 
   copy_solution.reinit(solution);
   copy_solution=solution;
@@ -204,13 +213,15 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     //   // else
     //     // pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
     // }
-    if(pde_operator.parameters.limiter_type == bound_preserving)
-    {
-      if(pde_operator.get_1d_in_disguise())
-        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
-      else
-        pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
-    }
+    // if(pde_operator.parameters.limiter_type == bound_preserving)
+    // {
+    //   if(pde_operator.get_1d_in_disguise())
+    //     pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+    //   else
+    //     pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    // }
+
+    if(do_limiter) apply_limiter(solution);
   }
 }
 

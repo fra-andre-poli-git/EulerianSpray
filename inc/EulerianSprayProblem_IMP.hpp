@@ -16,6 +16,7 @@
 
 #include<memory>
 #include<iostream>
+#include<chrono>
 
 
 template<int dim, int degree>
@@ -486,7 +487,7 @@ void EulerianSprayProblem<dim, degree>::run()
   while(time < final_time - 1e-12)
   {
     ++timestep_myReal;
-
+    auto t0 = std::chrono::high_resolution_clock::now();
     // Here the integration in time is performed by the integrator
     integrator->perform_time_step(eulerian_spray_operator,
       time,
@@ -497,10 +498,12 @@ void EulerianSprayProblem<dim, degree>::run()
       dof_handler,
       mapping,
       fe);
-  
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     pcout<<"Performed time step at time: "<<time<<
-      ", time step number: "<< timestep_myReal<<std::endl;
+      ", time step number: "<< timestep_myReal<<
+      "\n"<< "Computation of time step took "<<
+      std::chrono::duration<double>(t1-t0).count() << " s\n"<<std::endl;
 
     if(parameters.plot_everything)
       output_results(timestep_myReal, false);

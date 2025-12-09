@@ -323,10 +323,14 @@ template<int dim, int degree, int n_q_points_1d>
 void EulerianSprayOperator<dim, degree, n_q_points_1d>::
 bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping, const FESystem<dim> & fe) const
 {
+  // TODO: Refactor the cell average in a single dealii::Vector, since I merged
+  // the two loops over the cells
   // I create the vector to store cell averages and I initialize it
   std::vector< dealii::Vector<myReal>> cell_averages;
   cell_averages.assign(dof_handler.get_triangulation().n_active_cells(),
     dealii::Vector<myReal>(dim+1));
+
+
   // This vector is to store the averages of the velocities
   std::vector<myReal> cell_average_x_velocities(
     dof_handler.get_triangulation().n_active_cells());
@@ -587,10 +591,16 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
 bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof_handler, const MappingQ1<dim> & mapping,const FESystem<dim> & fe) const
 {
 
-  //-------------------------Compute cell averages------------------------------
-  std::vector< dealii::Vector<myReal>> cell_averages;
-  cell_averages.assign(dof_handler.get_triangulation().n_active_cells(),
-    dealii::Vector<myReal>(dim+1));
+  // I comment the next lines since, having merged the two loops, I don't need
+  // the vector of cell averages anymore
+  // std::vector< dealii::Vector<myReal>> cell_averages;
+  // cell_averages.assign(dof_handler.get_triangulation().n_active_cells(),
+  //   dealii::Vector<myReal>(dim+1));
+  
+  // Instead, I initialize a single deali::Vector
+  dealii::Vector<myReal> cell_average(dim+1);
+
+
   // QGauss<dim>   quadrature_formula(
   //   static_cast<unsigned int>(std::ceil((fe.degree + 1)/2.)));
   QGauss<dim>   quadrature_formula(fe.degree+1);
@@ -601,36 +611,11 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
     update_values | update_JxW_values);
   std::vector<dealii::Vector<myReal>> local_solution_values(n_q_points_average,
     dealii::Vector<myReal>(dim+1));
-  // Loop over active cells
+  // Define the iterators for the loop over active cells
   typename DoFHandler<dim>::active_cell_iterator
     cell = dof_handler.begin_active(),
     endc = dof_handler.end();
 
-  // for(; cell!=endc; ++cell)
-  // {
-  //   // Compute cell average
-  //   unsigned int cell_no = cell->active_cell_index();
-  //   fe_values.reinit(cell);
-  //   fe_values.get_function_values(solution, local_solution_values);
-  //   for(unsigned int q=0; q<n_q_points; ++q)
-  //     for(unsigned int d=0; d<dim+1; ++d)
-  //       cell_averages[cell_no][d] += local_solution_values[q][d]*
-  //         fe_values.JxW(q);
-  //   for(unsigned int d=0; d<dim+1; ++d)
-  //   {
-  //     cell_averages[cell_no][d] /= cell->measure(); 
-  //     if(d == 0)
-  //       Assert(cell_averages[cell_no][d] >= 0.0,
-  //         ExcMessage("Error: average density is negative"));
-  //     // TODO: modify this control for physical dimension 2 and 3
-  //     // if(d == 1)
-  //     //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
-  //     //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
-  //     //     ExcMessage("Error: average velocity exceeds realizability bounds"));
-  //   }
-  // }
-
-  //-------------------------Modify the solution--------------------------------
   // Set the quadrature points
   // Number of points needed for Gauss-Lobatto
   unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
@@ -643,25 +628,31 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
   FEValues<dim> fe_values_x (mapping, fe, quadrature_x, update_values);
   FEValues<dim> fe_values_y (mapping, fe, quadrature_y, update_values);
   unsigned n_q_points = quadrature_x.size();
-  
+  // I define here some vectors that I need in the loop (TODO: check that are always assigned)
+  std::vector<dealii::Vector<myReal>> solution_values(n_q_points,
+    Vector<myReal>(dim + 1));
+  std::vector<myReal> density_values(n_q_points);
   std::vector<unsigned int> local_dof_indices (fe.dofs_per_cell);
-    // TODO: this loop may not be very efficient since I do not access cell_averages
-  // sequentially
+
   for (; cell!=endc; ++cell)// Loop over active cells
   {
-    // Compute cell average
+  //-------------------------Compute cell averages------------------------------
     unsigned int cell_no = cell->active_cell_index();
     fe_values.reinit(cell);
     fe_values.get_function_values(solution, local_solution_values);
+
+    for (unsigned d=0; d<dim+1; ++d) // Initialize cell_average
+      cell_average[d] = 0.0;
+
     for(unsigned int q=0; q<n_q_points; ++q)
       for(unsigned int d=0; d<dim+1; ++d)
-        cell_averages[cell_no][d] += local_solution_values[q][d]*
+        cell_average[d] += local_solution_values[q][d]*
           fe_values.JxW(q);
     for(unsigned int d=0; d<dim+1; ++d)
     {
-      cell_averages[cell_no][d] /= cell->measure(); 
+      cell_average[d] /= cell->measure(); 
       if(d == 0)
-        Assert(cell_averages[cell_no][d] >= 0.0,
+        Assert(cell_average[d] >= 0.0,
           ExcMessage("Error: average density is negative"));
       // TODO: modify this control for physical dimension 2 and 3
       // if(d == 1)
@@ -691,10 +682,10 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
 
 
 
-
+  //-------------------------Modify the solution--------------------------------
     // unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
-    myReal cell_average_density = cell_averages[cell_no][0];
+    myReal cell_average_density = cell_average[0];
     if(cell_average_density <= parameters.epsilon)
     {
       // Set the mean value as solution
@@ -703,7 +694,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i];
+        solution(local_dof_indices[i]) = cell_average[comp_i];
       }
     }
     else
@@ -714,8 +705,9 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
 
       // Modify the density
       fe_values_x.reinit(cell);
-      fe_values_y.reinit(cell); 
-      std::vector<myReal> density_values(n_q_points);
+      fe_values_y.reinit(cell);
+      // I define it outside the loop
+      // std::vector<myReal> density_values(n_q_points);
       const FEValuesExtractors::Scalar density(0);
       myReal rho_min = std::numeric_limits<myReal>::max();
 
@@ -741,9 +733,9 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           // Each DoF is associated to a different component of the system
           unsigned int comp_i = fe.system_to_component_index(i).first;
           if(comp_i == 0)
-          solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+          solution(local_dof_indices[i]) = cell_average[comp_i] +
             theta * 
-            (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+            (solution(local_dof_indices[i]) - cell_average[comp_i]);
         }
       }
       
@@ -752,8 +744,9 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       myReal theta_i_j = 2.0;   
       dealii::Tensor<1, dim  + 1, myReal> state_q, mean_w;
       dealii::Tensor<1, dim, myReal> state_velocity, mean_velocity;
-      std::vector<dealii::Vector<myReal>> solution_values(n_q_points,
-        Vector<myReal>(dim + 1));
+      // I define it outside the loop
+      // std::vector<dealii::Vector<myReal>> solution_values(n_q_points,
+      //   Vector<myReal>(dim + 1));
 
       
       fe_values_x.get_function_values(solution, solution_values);
@@ -763,7 +756,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         for(size_t n = 0; n < dim + 1; ++n)
         {
           state_q[n] = solution_values[x_i][n];
-          mean_w[n] = cell_averages[cell_no][n];
+          mean_w[n] = cell_average[n];
         }
         // state_velocity = eulerian_spray_velocity<dim>(state_q);
         // mean_velocity = eulerian_spray_velocity<dim>(mean_w);
@@ -798,7 +791,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         for(size_t n = 0; n < dim + 1; ++n)
         {
           state_q[n] = solution_values[x_i][n];
-          mean_w[n] = cell_averages[cell_no][n];
+          mean_w[n] = cell_average[n];
         }
 
         double diff_den=(mean_w - state_q).norm();
@@ -826,9 +819,9 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = cell_averages[cell_no][comp_i] +
+        solution(local_dof_indices[i]) = cell_average[comp_i] +
           theta_j * 
-          (solution(local_dof_indices[i]) - cell_averages[cell_no][comp_i]);
+          (solution(local_dof_indices[i]) - cell_average[comp_i]);
       } 
     }
   }  
