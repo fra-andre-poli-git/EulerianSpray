@@ -3,6 +3,9 @@
 #include"EulerianSprayOperator.hpp"
 #include<deal.II/base/time_stepping.h>
 
+#include<chrono>
+#include<iostream>
+
 template <typename VectorType, typename Operator, int dim>
 LSRungeKuttaIntegrator<VectorType,Operator, dim>::LSRungeKuttaIntegrator(
   const RungeKuttaScheme scheme)
@@ -161,9 +164,9 @@ SSPRungeKuttaIntegrator<VectorType,Operator, dim>::SSPRungeKuttaIntegrator(
 // - for SSP33:
 //    - a[3][1] * a[2][1] = a[3][2] = factor[1]
 //    - b[2]/a[3][2] = b[1]/(a[3][2] * a[2][1]) = b[3] = factor [2]
-// I still use the two latter arguments, but one is to store the solution at
-// previous time step, and not vec_ri, therefore it is copy initialized from
-// solution every time step
+// I still use the two latter arguments (copy_solution and vec_ki), but one is
+// to store the solution at previous time step, and not vec_ri, therefore it is
+// copy initialized from solution every time step
 template <typename VectorType, typename Operator, int dim>
 void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   const Operator &pde_operator,
@@ -194,9 +197,9 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
   //     pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
   // }
 
-  copy_solution.reinit(solution);
+  // copy_solution.reinit(solution);
   copy_solution=solution;
-  vec_ki.reinit(solution);
+  // vec_ki.reinit(solution);
   unsigned int n_stages = factor.size();
   for(unsigned int stage = 0; stage<n_stages; ++stage)
   {

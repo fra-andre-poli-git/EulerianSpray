@@ -401,6 +401,7 @@ void EulerianSprayProblem<dim, degree>::run()
   // Here I initialize the solution with the initial data and I compute its
   // extrema to be used in the limiting phase
   eulerian_spray_operator.project(InitialSolution<dim>(parameters), solution);
+  
 
   if(eulerian_spray_operator.get_1d_in_disguise())
   {
@@ -415,6 +416,13 @@ void EulerianSprayProblem<dim, degree>::run()
     std::cout << "I computed initial velocity max norm, that happen to be "
       << eulerian_spray_operator.get_max_velocity()<<std::endl;
   }
+  
+  if(eulerian_spray_operator.get_1d_in_disguise())
+    eulerian_spray_operator.bound_preserving_projection_1d(solution, dof_handler,
+      mapping, fe);
+  else
+    eulerian_spray_operator.bound_preserving_projection(solution, dof_handler,
+      mapping, fe);
 
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
@@ -480,7 +488,7 @@ void EulerianSprayProblem<dim, degree>::run()
     << std::endl
     << std::endl;
 
-    output_results(0, false);
+  output_results(0, false);
   // This is the time loop
   time = 0;
   unsigned int timestep_myReal = 0;
@@ -519,7 +527,7 @@ void EulerianSprayProblem<dim, degree>::run()
     }
     
 
-    // Now if I want a different time step I compute the new onw
+    // Now if I want a different time step I compute the new one
     // time_step = CFL/
     //   Utilities::truncate_to_n_digits(
     //     eulerian_spray_operator.compute_cell_transport_speed(solution), 3);
