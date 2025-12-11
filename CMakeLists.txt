@@ -27,6 +27,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
 
 
+
 # Find dealii (preference for the mk modules version)
 find_package(deal.II 9.5.1
   HINTS $ENV{mkDealiiPrefix} ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
@@ -42,6 +43,11 @@ endif()
 deal_ii_initialize_cached_variables()
 project(${TARGET})
 deal_ii_invoke_autopilot()
+
+# Remove symbolic link compile_commands.json 
+if(EXISTS ${CMAKE_SOURCE_DIR}/compile_commands.json)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
+endif()
 
 # Include the directory for headers
 target_include_directories(${TARGET} PRIVATE inc)
