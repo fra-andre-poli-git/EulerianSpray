@@ -33,6 +33,8 @@
 
 #build folder
 build/
+build_debug/
+build_release/
 
 #cmake stuff
 compile_commands.json
