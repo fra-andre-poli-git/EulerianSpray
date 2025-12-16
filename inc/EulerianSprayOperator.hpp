@@ -28,6 +28,8 @@ class EulerianSprayOperator{
     // Constructor
     EulerianSprayOperator(TimerOutput & timer_output,const Parameters & params);
 
+    static constexpr int polynomial_degree = degree;
+
     void reinit(const Mapping<dim> & mapping,
       const DoFHandler<dim> & dof_handler);
 

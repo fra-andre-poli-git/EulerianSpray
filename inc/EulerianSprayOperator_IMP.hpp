@@ -504,11 +504,11 @@ bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & 
           mean_w[n] = cell_averages[cell_no][n]; 
         }
         double diff_den=(mean_w - state_q).norm();
-        if(diff_den< parameters.epsilon/2)
-          // std::cout << "Min velocity: " << min_velocity << " Max velocity: " << max_velocity << " velocity "
-          theta_i_j = 1.;
-        else
-        {
+        // if(diff_den< parameters.epsilon/2)
+        //   // std::cout << "Min velocity: " << min_velocity << " Max velocity: " << max_velocity << " velocity "
+        //   theta_i_j = 1.;
+        // else
+        // {
           // TODO: a lot of times it is called and then theta is = 1----> how to spare it?
           
           // state_velocity = eulerian_spray_velocity<dim>(state_q);
@@ -527,7 +527,7 @@ bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & 
           // std::cout << "The denominator is " <<  (mean_w - state_q).norm();
           theta_i_j = (mean_w - s).norm() / (diff_den);
           // std::cout << "Theta_i_j is " << theta_i_j << std::endl;
-        }
+        // }
         
 
         // dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
@@ -637,7 +637,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
   for (; cell!=endc; ++cell)// Loop over active cells
   {
   //-------------------------Compute cell averages------------------------------
-    unsigned int cell_no = cell->active_cell_index();
+    //unsigned int cell_no = cell->active_cell_index();
     fe_values.reinit(cell);
     fe_values.get_function_values(solution, local_solution_values);
 
@@ -761,10 +761,10 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         // state_velocity = eulerian_spray_velocity<dim>(state_q);
         // mean_velocity = eulerian_spray_velocity<dim>(mean_w);
         double diff_den=(mean_w - state_q).norm();
-        if(diff_den < parameters.epsilon/2)
-          theta_i_j = 1.;
-        else
-        {
+        // if(diff_den < parameters.epsilon/2)
+        //   theta_i_j = 1.;
+        // else
+        // {
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then
           auto s = find_intersection( state_q, mean_w,
@@ -773,7 +773,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           theta_i_j = (mean_w - s).norm() / diff_den;
 
-        }
+        // }
 
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)  
@@ -795,10 +795,10 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         }
 
         double diff_den=(mean_w - state_q).norm();
-        if(diff_den < parameters.epsilon/2)
-          theta_i_j = 1.;
-        else
-        {
+        // if(diff_den < parameters.epsilon/2)
+        //   theta_i_j = 1.;
+        // else
+        // {
 
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then 
@@ -806,7 +806,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
             parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           theta_i_j = (mean_w - s).norm() / diff_den;
-        }
+        // }
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)
         theta_j = std::min( theta_j, theta_i_j);

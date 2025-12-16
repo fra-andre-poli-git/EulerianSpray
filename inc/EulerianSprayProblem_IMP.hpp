@@ -416,14 +416,16 @@ void EulerianSprayProblem<dim, degree>::run()
     std::cout << "I computed initial velocity max norm, that happen to be "
       << eulerian_spray_operator.get_max_velocity()<<std::endl;
   }
-  
-  if(eulerian_spray_operator.get_1d_in_disguise())
-    eulerian_spray_operator.bound_preserving_projection_1d(solution, dof_handler,
-      mapping, fe);
-  else
-    eulerian_spray_operator.bound_preserving_projection(solution, dof_handler,
-      mapping, fe);
 
+  // if(parameters.limiter_type == bound_preserving && degree > 0)
+  // {
+  //   if(eulerian_spray_operator.get_1d_in_disguise())
+  //     eulerian_spray_operator.bound_preserving_projection_1d(solution, dof_handler,
+  //       mapping, fe);
+  //   else
+  //     eulerian_spray_operator.bound_preserving_projection(solution, dof_handler,
+  //       mapping, fe);
+  // }
   // This small chunk aims at finding h, the smallest distance between two
   // vertices
   double min_cell_length = std::numeric_limits<double>::max();
