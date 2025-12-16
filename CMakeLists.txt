@@ -22,6 +22,10 @@ set(TARGET_SRC ${TARGET_SRC} ${TARGET_INC})
 
 cmake_minimum_required(VERSION 3.13.4)
 
+
+# Print build type
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 # Enable debug symbols and disable optimizations only if Debug mode is selected
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
@@ -44,10 +48,6 @@ deal_ii_initialize_cached_variables()
 project(${TARGET})
 deal_ii_invoke_autopilot()
 
-# Remove symbolic link compile_commands.json 
-if(EXISTS ${CMAKE_SOURCE_DIR}/compile_commands.json)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
-endif()
 
 # Include the directory for headers
 target_include_directories(${TARGET} PRIVATE inc)

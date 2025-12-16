@@ -19,7 +19,7 @@ Most of the parameters are set at run time via input file, that can be found in
 ./input directory. The physical dimension of the problem is set at compile time,
 in the main.cpp file, as well as the polynomial degree.
 
-To run the code you need to follow the steps below
+To run the code you need to follow the steps below 
 
 ```bash
 mkdir build
@@ -28,6 +28,8 @@ cd build
 
 cmake ..
 
+make release
+
 make
 
 mkdir results
@@ -35,9 +37,3 @@ mkdir results
 ./main ../input/INPUTFILENAME.prm
 ```
 where INPUTFILENAME.prm is the desired input file
-
-To configure the compilation in Release mode specify:
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release ..
-```
