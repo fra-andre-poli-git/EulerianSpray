@@ -26,13 +26,13 @@ subsection Operator parameters
 #  local_lax_friedrichs
 #  harten_lax_vanleer
 #  godunov
-  set numerical flux type= godunov
+  set numerical flux type = godunov
 end
 
 subsection Limiter parameters
 # Options for limiter:
 #  none
 #  bound_preserving
-  set limiter = none
+  set limiter = bound_preserving
   set epsilon = 1e-13
 end
