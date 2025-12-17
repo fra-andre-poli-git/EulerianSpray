@@ -702,7 +702,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       // I use the projection inroduced by Yang, Wei, Shu, in [49]. 
       // In [42] are showed different chices for the projection
 
-
+      
       // Modify the density
       fe_values_x.reinit(cell);
       fe_values_y.reinit(cell);
@@ -733,12 +733,13 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           // Each DoF is associated to a different component of the system
           unsigned int comp_i = fe.system_to_component_index(i).first;
           if(comp_i == 0)
-          solution(local_dof_indices[i]) = cell_average[comp_i] +
-            theta * 
-            (solution(local_dof_indices[i]) - cell_average[comp_i]);
+          solution(local_dof_indices[i]) = (1.-theta) * cell_average[comp_i]
+            + theta * solution(local_dof_indices[i]);
+            // cell_average[comp_i] +
+            // theta * 
+            // (solution(local_dof_indices[i]) - cell_average[comp_i]);
         }
       }
-      
       // Modify the velocity
       myReal theta_j = 2.0;
       myReal theta_i_j = 2.0;   
@@ -819,10 +820,13 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       {
         // Each DoF is associated to a different component of the system
         unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = cell_average[comp_i] +
-          theta_j * 
-          (solution(local_dof_indices[i]) - cell_average[comp_i]);
-      } 
+        solution(local_dof_indices[i]) = 
+          (1.-theta_j) * cell_average[comp_i] +
+          theta_j * (solution(local_dof_indices[i]));
+          // cell_average[comp_i] +
+          // theta_j * 
+          // (solution(local_dof_indices[i]) - cell_average[comp_i]);
+      }
     }
   }  
 }
