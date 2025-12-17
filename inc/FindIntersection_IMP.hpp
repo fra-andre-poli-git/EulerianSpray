@@ -96,8 +96,10 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   double epsilon,
   double S /* max velocity norm*/)
 { 
-  double frontier = (S + epsilon)*(S + epsilon)*q[0]*q[0];
+  // I put this piece in a scope to hide the name velocity_norm and use it in
+  // the lambda function
   {
+    double frontier = (S + epsilon)*(S + epsilon)*q[0]*q[0];
     double velocity_norm = 0;
     for(unsigned d = 1; d < dim; ++d)
       velocity_norm += (q[d]*q[d]);
@@ -111,7 +113,7 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
     for(unsigned d = 1; d < dim; ++d)
       velocity_norm += (s[d]*s[d]);
 
-    return velocity_norm - frontier;
+    return velocity_norm - (S + epsilon)*(S + epsilon)*s[0]*s[0];
   };
 
   double t0 = 0., t1 = 1.;
