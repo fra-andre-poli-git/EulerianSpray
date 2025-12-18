@@ -26,6 +26,16 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
     case 2:
     {
       if(component==0)
+        return 1 * (p[0]<0.)
+          + 0.25 * (p[0]>=0.);
+      if(component==1)
+        return 1 * (p[0]<0.)
+          +  0.25 * 0  * (p[0]>=0.);
+      return 0.;
+    }
+    case 3:
+    {
+      if(component==0)
         return 0.5;
       if(component==1)
         return 0.5 
@@ -34,16 +44,6 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
             + (0.4-p[0]) * (0<=p[0] && p[0] <0.8)
             + -0.4 * (p[0]>=0.8));
       return 0.; 
-    }
-    case 3:
-    {
-      if(component==0)
-        return 1 * (p[0]<0.)
-          + 0.25 * (p[0]>=0.);
-      if(component==1)
-        return 1 * (p[0]<0.)
-          +  0.25 * 0  * (p[0]>=0.);
-      return 0.;
     }
     case 4:
     {
@@ -54,18 +54,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
           + 0.5 * 0.4 * (p[0]>0.);
       return 0.; 
     }
-    case 5:
-    {
-      if(component == 0)
-        return 0.9*(((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) ||
-          ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15)))
-          + 0.1;
-      if(component==1)
-        return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) 
-          - 0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
-      return 0.; 
-    }
-    case 7:
+    case 6:
     {
       if(component == 0) // \rho
         return 1./100.;
@@ -83,7 +72,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
         return 0.; // to avoid implicit fallthrough warning
       }
     }
-    case 8:
+    case 7:
     {
       if(component == 0)
         return 1./10.;
@@ -93,7 +82,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
         return 1./10. * 0.25 * (1. - 2. * (p[1]>0));
       return 0.; // to avoid implicit fallthrough warning
     }
-    case 9:
+    case 8:
     {
       if(component == 0)
         return 1./100.;
@@ -120,10 +109,19 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
       }
       return 0.; // to avoid implicit fallthrough warning
     }
-    case 10:
+    /*
+    case ???:
     {
-   
+      if(component == 0)
+        return 0.9*(((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) ||
+          ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15)))
+          + 0.1;
+      if(component==1)
+        return 0.5 * ((-0.3<p[0] && p[0] <-0.2) && (-0.15<p[1] && p[1] <0.05)) 
+          - 0.5 * ((0.2<p[0] && p[0]<0.3) && (-0.05<p[1]) && (p[1]<0.15));
+      return 0.; 
     }
+    */
     default:
       Assert(false, ExcNotImplemented());
   }
@@ -134,7 +132,7 @@ double FinalSolution<dim>::value(const Point<dim> & p, const unsigned int compon
 {
   switch(parameters.testcase)
   {
-    case 2:
+    case 3:
     {
       if(component == 0)
         return 0.5 * (p[0]< -0.75) 
@@ -160,7 +158,7 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p, const unsigned in
 {
   switch(parameters.testcase)
   {
-    case 2:
+    case 3:
     {
       if(component == 0)
         return 0.5 * (p[0]< -0.75) 
@@ -186,7 +184,7 @@ double DirichletFunction<dim>::value(const Point<dim> & p, const unsigned int co
   const double t = this->get_time();
   switch(parameters.testcase)
   {
-    case 2:
+    case 3:
     {
       (void) t;
       if(component == 0)
@@ -221,7 +219,7 @@ double ExactSolution<dim>::value(const Point<dim> & p, const unsigned int compon
       if(component == 2)
         return 0.;
     }
-    case 2:
+    case 3:
     {
       if (component == 0) // rho(x,t)
         return 0.5 * (p[0] < -0.5 - 0.5*t)

@@ -1,7 +1,7 @@
 #Listing of parameteres
 
 subsection Problem parameters
-  set testcase = 5
+  set testcase = ???
   set myReal of elements in x direction = 100 #for 1d cases, use a multiple of 20
   set final time = 0.5
   set snapshot instant = 0.0125

@@ -40,8 +40,10 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 {
   switch(parameters.testcase)
   {
-    // Accuracy 1D(Example 3 from [49])
-    case 1:{
+    
+    case 1:// Accuracy 1d (Example 3 from [49])
+    {
+      Assert(false, ExcNotImplemented());
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction, parameters.n_el_x_direction /10},
         Point<dim>(0,0),
@@ -79,13 +81,43 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = 0.1;
       break;
     }
-    // Vacuum 1D
-    case 2:
+    case 2:// Delta shock 1d (Example 4 from [49])
+    {
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+        {parameters.n_el_x_direction,parameters.n_el_x_direction/10},
+        Point<dim>(-0.5,0),
+        Point<dim>(0.5,0.1),
+        true);
+#ifdef DEAL_II_WITH_P4EST
+      std::vector<GridTools::PeriodicFacePair<
+        typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
+#else
+      std::vector<GridTools::PeriodicFacePair<
+      typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+#endif
+      GridTools::collect_periodic_faces(triangulation,
+        2,
+        3,
+        1,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+
+      eulerian_spray_operator.set_1d_in_disguise();
+
+      
+      // final_time = parameters.final_time;
+      final_time = 0.5;
+      break;
+    }  
+    case 3:// Vacuum 1D (Example 5 from [49])
     {
       // Note the fact that last argument is true, therefore we get different
       // boundary_id for the four boundaries (process called "colorization")
       //
-      // I link the myReal of elements in y direction to the ones in x, assuring
+      // I link the number of elements in y direction to the ones in x, assuring
       // that the cells are squared, since I may have problems in determining
       // the time step (even though I am rewiewing the function that computes
       // the speed)
@@ -123,40 +155,30 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = 0.5;
       break;
     }
-    // Delta-shock 1D
-    case 3:
+    case 4:// Vacuum close up 1d (Example 6 of [49])
     {
-      GridGenerator::subdivided_hyper_rectangle(triangulation,
-        {parameters.n_el_x_direction,parameters.n_el_x_direction/10},
-        Point<dim>(-0.5,0),
-        Point<dim>(0.5,0.1),
+      Assert(false, ExcNotImplemented());
+    }
+    case 5:// Accuracy 2d (Example 7 of [49])
+    {
+      Assert(false, ExcNotImplemented());
+    }
+    case 6: // Radial delta in the origin 2d (Example 8 of [49])
+    {
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
         true);
-#ifdef DEAL_II_WITH_P4EST
-      std::vector<GridTools::PeriodicFacePair<
-        typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
-#else
-      std::vector<GridTools::PeriodicFacePair<
-      typename Triangulation<dim>::cell_iterator>> periodicity_vector;
-#endif
-      GridTools::collect_periodic_faces(triangulation,
-        2,
-        3,
-        1,
-        periodicity_vector);
-      triangulation.add_periodicity(periodicity_vector);
 
       eulerian_spray_operator.set_neumann_boundary(0);
       eulerian_spray_operator.set_neumann_boundary(1);
-
-      eulerian_spray_operator.set_1d_in_disguise();
-
-      
-      // final_time = parameters.final_time;
-      final_time = 0.5;
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      final_time = parameters.final_time;
       break;
     }
-    // Test diffusivity 2d
-    case 5:
+    case 7:// Delta crossing in the origin 2d (Example 9 of [49])
     {
       GridGenerator::subdivided_hyper_cube(triangulation,
         parameters.n_el_x_direction,
@@ -170,46 +192,7 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     }
-    // Delta in the origin 2d
-    case 7:
-    {
-      GridGenerator::subdivided_hyper_cube(triangulation,
-        parameters.n_el_x_direction,
-        -0.5,
-        0.5,
-        true);
-
-//       #ifdef DEAL_II_WITH_P4EST
-//       std::vector<GridTools::PeriodicFacePair<
-//         typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
-// #else
-//       std::vector<GridTools::PeriodicFacePair<
-//       typename Triangulation<dim>::cell_iterator>> periodicity_vector;
-// #endif
-
-//       GridTools::collect_periodic_faces(triangulation,
-//         0,    // boundary_id left
-//         1,    // boundary_id right
-//         0,    // direction x
-//         periodicity_vector);
-
-//       GridTools::collect_periodic_faces(triangulation,
-//         2, // boundary_id bottom
-//         3, // boundary_id top
-//         1, // direction y
-//         periodicity_vector);
-
-//       triangulation.add_periodicity(periodicity_vector);
-
-
-      eulerian_spray_operator.set_neumann_boundary(0);
-      eulerian_spray_operator.set_neumann_boundary(1);
-      eulerian_spray_operator.set_neumann_boundary(2);
-      eulerian_spray_operator.set_neumann_boundary(3);
-      final_time = parameters.final_time;
-      break;
-    }
-    case 8:
+    case 8: // Anular delta 2d (Example 10 of [49])
     {
       GridGenerator::subdivided_hyper_cube(triangulation,
         parameters.n_el_x_direction,
@@ -222,30 +205,32 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(3);
       final_time = parameters.final_time;
       break;
-    }
-    case 9:
+    } 
+    case 9:// Vacuum 2d (Example 11 of [49])
     {
-      GridGenerator::subdivided_hyper_cube(triangulation,
-        parameters.n_el_x_direction,
-        -0.5,
-        0.5,
-        true);
-      eulerian_spray_operator.set_neumann_boundary(0);
-      eulerian_spray_operator.set_neumann_boundary(1);
-      eulerian_spray_operator.set_neumann_boundary(2);
-      eulerian_spray_operator.set_neumann_boundary(3);
-      final_time = parameters.final_time;
-      break;
-    }
-    case 10:
+      Assert(false, ExcNotImplemented());
+    }  
+    case 10:// Taylor-Green vortices
     {
-
-    }
-    // Taylor-Green vortices
-    case 11:
-    {
+      Assert(false, ExcNotImplemented());
       GridGenerator::hyper_cube(triangulation, 0, 1, true);
     }
+    /*
+    case ???:// Test diffusivity 2d
+    {
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      final_time = parameters.final_time;
+      break;
+    }
+    */
   }
 
   dof_handler.distribute_dofs(fe);
@@ -264,8 +249,8 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
 template<int dim, int degree>
 void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result_myReal, bool final_time)
 {
-  // In testcase 2 I have the exact solution at final time
-  if(parameters.testcase==2 && final_time)
+  // In testcase 3 I have the exact solution at final time
+  if(parameters.testcase==3 && final_time)
   {
     const std::array<double, 2> errors =
       eulerian_spray_operator.compute_errors(FinalSolution<dim>(parameters),
@@ -309,7 +294,7 @@ void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result
 
 
   // Here I insert the exact solution
-  if(parameters.testcase==2 && final_time)
+  if(parameters.testcase==3 && final_time)
   {
     SolutionType ExactFinalSolution;
     ExactFinalSolution.reinit(solution);

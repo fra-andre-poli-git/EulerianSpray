@@ -1,12 +1,12 @@
 #Listing of parameteres
 
 subsection Problem parameters
-  set testcase = 3
+  set testcase = 2
   set myReal of elements in x direction = 60 #for 1d cases, use a multiple of 20
   set final time = 0.5
   set snapshot instant = 0.01
   set plot everything = false
-  set CFL = 0.1
+  set CFL = 0.01
 end
 
 subsection Integrator parameters
