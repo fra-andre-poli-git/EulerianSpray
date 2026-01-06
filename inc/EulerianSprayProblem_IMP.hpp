@@ -206,9 +206,19 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       final_time = parameters.final_time;
       break;
     } 
-    case 9:// Vacuum 2d (Example 11 of [49])
+    case 9:// Cross vacuum 2d (Example 11 of [49])
     {
-      Assert(false, ExcNotImplemented());
+      GridGenerator::subdivided_hyper_cube(triangulation,
+        parameters.n_el_x_direction,
+        -0.5,
+        0.5,
+        true);
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_neumann_boundary(2);
+      eulerian_spray_operator.set_neumann_boundary(3);
+      final_time = parameters.final_time;
+      break;
     }  
     case 10:// Taylor-Green vortices
     {

@@ -109,6 +109,18 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
       }
       return 0.; // to avoid implicit fallthrough warning
     }
+    case 9:
+    {
+      if(component == 0)
+        return 0.5;
+      if (component == 1)
+        return 0.;
+        /*return 0.5 *
+          (0.3 *  +
+            -0.4 * +
+            -0.3 * +
+            0.4 * );*/
+    }
     /*
     case ???:
     {

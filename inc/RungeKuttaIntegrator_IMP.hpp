@@ -77,14 +77,27 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
 {
   AssertDimension(ai.size() + 1, bi.size());
 
-    if(pde_operator.parameters.limiter_type == bound_preserving)
+  constexpr bool has_positive_degree = (Operator::polynomial_degree > 0);
+  const bool do_limiter = (pde_operator.parameters.limiter_type == bound_preserving);
+  const bool is_1d = pde_operator.get_1d_in_disguise();
+  std::function<void(SolutionType&)> apply_limiter;
+  
+  if constexpr (has_positive_degree)
   {
-    if(pde_operator.get_1d_in_disguise())
-      pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
-    else
-      pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    if (do_limiter)
+    {
+      if (is_1d)
+        apply_limiter = [&](SolutionType &s){
+          pde_operator.bound_preserving_projection_1d(s, dof_handler, mapping, fe); };
+      else
+        apply_limiter = [&](SolutionType &s){
+          pde_operator.bound_preserving_projection(s, dof_handler, mapping, fe); };
+    }
   }
-
+  if constexpr(has_positive_degree)
+    if(do_limiter)
+      apply_limiter(solution);
+  
   pde_operator.perform_lsrk_stage(current_time,
     bi[0] * time_step,
     ai[0] * time_step,
@@ -92,12 +105,15 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     vec_ri,
     solution,
     vec_ri);
-    //if(pde_operator.get_1d_in_disguise())
-      pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
-    //else
-      //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+    // //if(pde_operator.get_1d_in_disguise())
+    //   pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+    // //else
+    //   //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
   for (unsigned int stage = 1; stage < bi.size(); ++stage)
     {
+      if constexpr(has_positive_degree)
+        if(do_limiter)
+          apply_limiter(solution);
       const double c_i = ci[stage];
       pde_operator.perform_lsrk_stage(current_time + c_i * time_step,
         bi[stage] * time_step,
@@ -108,10 +124,10 @@ void LSRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         vec_ki,
         solution,
         vec_ri);
-      //if(pde_operator.get_1d_in_disguise())
-        pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
-      //else
-        //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
+      // //if(pde_operator.get_1d_in_disguise())
+      //   pde_operator.bound_preserving_projection_1d(solution, dof_handler, mapping, fe);
+      // //else
+      //   //pde_operator.bound_preserving_projection(solution, dof_handler, mapping, fe);
     }
 }
 
@@ -196,7 +212,6 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
         apply_limiter = [&](SolutionType &s){
           pde_operator.bound_preserving_projection(s, dof_handler, mapping, fe); };
     }
-   
   }
   
   // if(pde_operator.parameters.limiter_type == bound_preserving)

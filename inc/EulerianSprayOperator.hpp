@@ -15,7 +15,7 @@ using namespace dealii;
 
 // This class implements the evaluators for Eulerian Spray problem
 // in analogy to the 'EulerOperator' class in step-67 and 'LaplaceOperator'
-// in step-37 or step-59. It implements the differential operator Since this 
+// in step-37 or step-59. It implements the differential operator. Since this 
 // operator is non-linear and does not require
 // a matrix interface to be used by a preconditioner, we implement an 'apply'
 // function (...)

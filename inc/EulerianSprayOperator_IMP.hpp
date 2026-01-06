@@ -94,7 +94,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply(
   // In this block I apply the nonlinear operator proper
   {
     // This is for the output, I may use it later
-    // TimerOutput::Scope t(timer, "apply - integrals");
+    TimerOutput::Scope t(timer, "apply - integrals");
     data.loop(& EulerianSprayOperator::local_apply_cell,
       & EulerianSprayOperator::local_apply_face,
       & EulerianSprayOperator::local_apply_boundary_face,
@@ -107,7 +107,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::apply(
   }
   // In this block I apply the inverse matrix
   {
-    // TimerOutput::Scope t(timer, "apply - inverse mass");
+    TimerOutput::Scope t(timer, "apply - inverse mass");
     
     data.cell_loop(& EulerianSprayOperator::local_apply_inverse_mass_matrix,
       this,
@@ -661,27 +661,6 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
       //     ExcMessage("Error: average velocity exceeds realizability bounds"));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   //-------------------------Modify the solution--------------------------------
     // unsigned int cell_no = cell->active_cell_index();
     cell->get_dof_indices(local_dof_indices);
@@ -724,7 +703,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         myReal theta = 1.0;
         // if(diff_den < 1e-12)
         //   std::cout<<"Warning in density modification: you are dividing for a small myReal"<<std::endl;
-        theta = diff_num / (diff_den + 1e-14);
+        theta = diff_num / (diff_den /*+ 1e-14*/);
         Assert(theta >= 0.0 && theta <= 1.0,
           ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
@@ -733,11 +712,11 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           // Each DoF is associated to a different component of the system
           unsigned int comp_i = fe.system_to_component_index(i).first;
           if(comp_i == 0)
-          solution(local_dof_indices[i]) = (1.-theta) * cell_average[comp_i]
-            + theta * solution(local_dof_indices[i]);
-            // cell_average[comp_i] +
-            // theta * 
-            // (solution(local_dof_indices[i]) - cell_average[comp_i]);
+            solution(local_dof_indices[i]) = (1.-theta) * cell_average[comp_i]
+              + theta * solution(local_dof_indices[i]);
+              // cell_average[comp_i] +
+              // theta * 
+              // (solution(local_dof_indices[i]) - cell_average[comp_i]);
         }
       }
       // Modify the velocity

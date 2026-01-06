@@ -13,8 +13,43 @@
 // It must be 2, since the functions of the output are not meant to be used in
 // dimension 1.
 constexpr unsigned int dimension = 2;
-constexpr unsigned int finite_element_degree = 2;
+constexpr unsigned int finite_element_degree = 0;
 
+// Crea una funzione di test per il flusso a un'interfaccia
+void test_numerical_flux() {
+    // Stati sinistro e destro semplici
+    double rho_m = 1.0, u_m = 0.1, v_m = 0. ;
+    double rho_p = 1.0, u_p = -0.1, v_p = 0.;
+
+    std::cout<< "rho_m = " << rho_m <<" u_m = " << u_m << " v_m " << v_m << std::endl;
+    std::cout<< "rho_p = " << rho_p <<" u_p = " << u_p << " v_p " << v_p << std::endl;
+
+    
+    Tensor<1,dimension + 1> w_m, w_p;
+    w_m[0] = rho_m; w_m[1] = rho_m*u_m; w_m[2] = rho_m*v_m;
+    w_p[0] = rho_p; w_p[1] = rho_p*u_p; w_p[2] = rho_p*v_p;
+
+    std::cout<< "w_m = [" << w_m[0] <<" , "<< w_m[1] <<" , "<< w_m[2] <<"]"<<std::endl;
+    std::cout<< "w_p = [" << w_p[0] <<" , "<< w_p[1] <<" , "<< w_p[2] <<"]"<<std::endl;
+    
+    Tensor<1,2> normal({-1.0, 0.0});
+
+    std::cout<< "normal = [" << normal[0] << ", " << normal[1] << "]"<<std::endl;
+    
+    // Calcola flusso con entrambi i metodi
+    // auto flux_godunov = eulerian_spray_numerical_flux(w_m, w_p, normal, godunov);
+    // auto flux_llf = eulerian_spray_numerical_flux(w_m, w_p, normal, local_lax_friedrichs);
+
+    auto flux_godunov = eulerian_spray_numerical_flux(w_p, w_m, normal, godunov);
+    auto flux_llf = eulerian_spray_numerical_flux(w_p, w_m, normal, local_lax_friedrichs);
+    
+    // Stampa e verifica manualmente
+    std::cout << "Godunov flux: " << flux_godunov << std::endl;
+    std::cout << "LLF flux: " << flux_llf << std::endl;
+    
+    // Per questo caso simmetrico, il flusso dovrebbe essere quello
+    // con u_interface ≈ 0
+}
 
 
 int main(int argc, char ** argv){
@@ -31,6 +66,7 @@ int main(int argc, char ** argv){
     EulerianSprayProblem<dimension,finite_element_degree>
       eulerian_spray_problem(parameters);
     eulerian_spray_problem.run();
+    // test_numerical_flux();
   }
   catch (std::exception &exc)
   {

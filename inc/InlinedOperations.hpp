@@ -178,25 +178,41 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, myReal> & w_minus,
 
       const myReal zero = myReal();
 
-      // Crea maschere binarie (0.0 o 1.0)
-      const auto mask_u_m_pos = compare_and_apply_mask<SIMDComparison::greater_than>(u_m, zero, myReal(1.0), myReal(0.0));
-      const auto mask_u_m_neg = compare_and_apply_mask<SIMDComparison::less_than_or_equal>(u_m, zero, myReal(1.0), myReal(0.0));
-      const auto mask_u_p_pos = compare_and_apply_mask<SIMDComparison::greater_than>(u_p, zero, myReal(1.0), myReal(0.0));
-      const auto mask_u_p_neg = compare_and_apply_mask<SIMDComparison::less_than_or_equal>(u_p, zero, myReal(1.0), myReal(0.0));
+      // Create binary masks (0.0 o 1.0)
+      const auto mask_u_m_pos =
+        compare_and_apply_mask<SIMDComparison::greater_than>(
+          u_m, zero, myReal(1.0), myReal(0.0));
+      const auto mask_u_m_neg =
+        compare_and_apply_mask<SIMDComparison::less_than_or_equal>(
+          u_m, zero, myReal(1.0), myReal(0.0));
+      const auto mask_u_p_pos =
+        compare_and_apply_mask<SIMDComparison::greater_than>(
+          u_p, zero, myReal(1.0), myReal(0.0));
+      const auto mask_u_p_neg =
+        compare_and_apply_mask<SIMDComparison::less_than_or_equal>(
+          u_p, zero, myReal(1.0), myReal(0.0));
 
-      // AND logico = moltiplicazione
-      const auto mask_pp = mask_u_m_pos * mask_u_p_pos;  // entrambi positivi
-      const auto mask_mm = mask_u_m_neg * mask_u_p_neg;  // entrambi negativi
+      // Logic AND
+      const auto mask_pp = mask_u_m_pos * mask_u_p_pos;  // both positive
+      const auto mask_mm = mask_u_m_neg * mask_u_p_neg;  // both negative
       const auto mask_pm = mask_u_m_pos * mask_u_p_neg;  // shock
-      const auto mask_mp = mask_u_m_neg * mask_u_p_pos;  // espansione
+      //const auto mask_mp = mask_u_m_neg * mask_u_p_pos;  // expansion
 
       const auto rho_m_sqrt = std::sqrt(density_minus);
       const auto rho_p_sqrt = std::sqrt(density_plus);
-
-      const auto u_delta = (rho_m_sqrt * u_m + rho_p_sqrt * u_p) / (rho_m_sqrt + rho_p_sqrt);
       
-      const auto mask_ud_pos = compare_and_apply_mask<SIMDComparison::greater_than>(u_delta, zero, myReal(1.0), myReal(0.0));
-      const auto mask_ud_neg = compare_and_apply_mask<SIMDComparison::less_than>(u_delta, zero, myReal(1.0), myReal(0.0));
+      // Define u_delta, which is the weighted average of the velocity
+      const auto u_delta = (rho_m_sqrt * u_m + rho_p_sqrt * u_p) /
+        (rho_m_sqrt + rho_p_sqrt);
+      
+      // Masks for u_delta sign
+      const auto mask_ud_pos = 
+        compare_and_apply_mask<SIMDComparison::greater_than>(
+          u_delta, zero, myReal(1.0), myReal(0.0));
+      const auto mask_ud_neg =
+        compare_and_apply_mask<SIMDComparison::less_than>(
+          u_delta, zero, myReal(1.0), myReal(0.0));
+
       // OR logico con valori 0/1: max(a,b) oppure a+b (dato che sono mutualmente esclusivi)
       const auto mask_ud_zero = myReal(1.0) - mask_ud_pos - mask_ud_neg;
 

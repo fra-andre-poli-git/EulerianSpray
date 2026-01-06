@@ -38,7 +38,7 @@ mkdir results
 ```
 where INPUTFILENAME.prm is the desired input file.
 I underline the switch to release mode, since otherwise 2d simulation would be
-unfeasible. To check the build type:
+unfeasible. To interrogate the build type:
 ```bash
 grep CMAKE_BUILD_TYPE CMakeCache.txt
 ```
