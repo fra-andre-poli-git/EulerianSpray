@@ -5,7 +5,7 @@ subsection Problem parameters
   set myReal of elements in x direction = 60 #for 1d cases, use a multiple of 20
   set final time = 0.5
   set snapshot instant = 0.01
-  set plot everything = false
+  set plot everything = false  # for debugging purpose
   set CFL = 0.01
 end
 
@@ -24,7 +24,6 @@ end
 subsection Operator parameters
 # Options for numerical flux:
 #  local_lax_friedrichs
-#  harten_lax_vanleer
 #  godunov
   set numerical flux type = godunov
 end

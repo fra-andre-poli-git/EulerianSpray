@@ -13,7 +13,7 @@
 // It must be 2, since the functions of the output are not meant to be used in
 // dimension 1.
 constexpr unsigned int dimension = 2;
-constexpr unsigned int finite_element_degree = 0;
+constexpr unsigned int finite_element_degree = 2;
 
 // Crea una funzione di test per il flusso a un'interfaccia
 void test_numerical_flux() {

@@ -207,7 +207,7 @@ void SSPRungeKuttaIntegrator<VectorType,Operator, dim>::perform_time_step(
     {
       if (is_1d)
         apply_limiter = [&](SolutionType &s){
-          pde_operator.bound_preserving_projection_1d(s, dof_handler, mapping, fe); };
+          pde_operator.straight_bound_preserving_projection_1d(s, dof_handler, mapping, fe); };
       else
         apply_limiter = [&](SolutionType &s){
           pde_operator.bound_preserving_projection(s, dof_handler, mapping, fe); };

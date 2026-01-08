@@ -15,6 +15,14 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d(
   const myReal & a,
   const myReal & b);
 
+template<int dim> dealii::Tensor<1, dim, myReal> find_intersection_1d_LLF_Variant(
+  const dealii::Tensor<1, dim, myReal> & q,
+  const dealii::Tensor<1, dim, myReal> & w,
+  const myReal & epsilon,
+  const myReal & a,
+  const myReal & b);
+
+
 template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   dealii::Tensor<1, dim, myReal>  q,
   dealii::Tensor<1, dim, myReal>  w,

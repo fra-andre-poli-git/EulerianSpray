@@ -228,18 +228,18 @@ eulerian_spray_numerical_flux(const Tensor<1, dim + 1, myReal> & w_minus,
 
       return flux;
     }
-    case harten_lax_vanleer:
-    {
-      const auto avg_velocity_normal = 
-        0.5 * ((velocity_minus + velocity_plus) * normal);
-      const myReal s_pos = std::max(myReal(), avg_velocity_normal);
-      const myReal s_neg = std::min(myReal(), avg_velocity_normal);
-      const myReal inverse_s = myReal(1.) / (s_pos - s_neg);
+    // case harten_lax_vanleer:
+    // {
+    //   const auto avg_velocity_normal = 
+    //     0.5 * ((velocity_minus + velocity_plus) * normal);
+    //   const myReal s_pos = std::max(myReal(), avg_velocity_normal);
+    //   const myReal s_neg = std::min(myReal(), avg_velocity_normal);
+    //   const myReal inverse_s = myReal(1.) / (s_pos - s_neg);
 
-      return inverse_s *
-        ((s_pos * (flux_minus * normal) - s_neg * (flux_plus * normal)) -
-        s_pos * s_neg * (w_minus - w_plus));
-    }
+    //   return inverse_s *
+    //     ((s_pos * (flux_minus * normal) - s_neg * (flux_plus * normal)) -
+    //     s_pos * s_neg * (w_minus - w_plus));
+    // }
     default:
     {
       Assert(false, ExcNotImplemented());

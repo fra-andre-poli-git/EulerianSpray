@@ -64,6 +64,11 @@ class EulerianSprayOperator{
       const DoFHandler<dim> & dof_handler,
       const MappingQ1<dim> & mapping,
       const FESystem<dim> & fe) const;
+    
+    void straight_bound_preserving_projection_1d(SolutionType & solution,
+      const DoFHandler<dim> & dof_handler,
+      const MappingQ1<dim> & mapping,
+      const FESystem<dim> & fe) const;
 
     void bound_preserving_projection(SolutionType & solution,
       const DoFHandler<dim> & dof_handler,

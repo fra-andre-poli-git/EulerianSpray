@@ -151,13 +151,37 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
       eulerian_spray_operator.set_neumann_boundary(1);
       eulerian_spray_operator.set_1d_in_disguise();
 
-      // final_time = parameters.final_time;
-      final_time = 0.5;
+      final_time = parameters.final_time;
       break;
     }
     case 4:// Vacuum close up 1d (Example 6 of [49])
     {
-      Assert(false, ExcNotImplemented());
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+        {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
+        Point<dim>(-1,0),
+        Point<dim>(1,0.1),
+        true);
+      #ifdef DEAL_II_WITH_P4EST
+      std::vector<GridTools::PeriodicFacePair<
+        typename parallel::distributed::Triangulation<dim>::cell_iterator>> periodicity_vector;
+#else
+      std::vector<GridTools::PeriodicFacePair<
+      typename Triangulation<dim>::cell_iterator>> periodicity_vector;
+#endif
+
+      GridTools::collect_periodic_faces(triangulation,
+        2,
+        3,
+        1,
+        periodicity_vector);
+      triangulation.add_periodicity(periodicity_vector);
+
+      eulerian_spray_operator.set_neumann_boundary(0);
+      eulerian_spray_operator.set_neumann_boundary(1);
+      eulerian_spray_operator.set_1d_in_disguise();
+
+      final_time = parameters.final_time;
+      break;
     }
     case 5:// Accuracy 2d (Example 7 of [49])
     {

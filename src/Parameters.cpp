@@ -148,7 +148,6 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     static const std::map<std::string, NumericalFlux> flux_map =
     {
       {"local_lax_friedrichs", local_lax_friedrichs},
-      {"harten_lax_vanleer", harten_lax_vanleer},
       {"godunov", godunov}
     };
 
@@ -162,8 +161,6 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     
     // if(selected_flux == "local_lax_friedrichs")
     //   numerical_flux_type = local_lax_friedrichs;
-    // else if(selected_flux == "harten_lax_vanleer")
-    //   numerical_flux_type = harten_lax_vanleer;
     // else if(selected_flux == "godunov")
     //   numerical_flux_type = godunov;
   }
