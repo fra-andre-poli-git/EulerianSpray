@@ -518,7 +518,7 @@ bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & 
           
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then
-          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
+          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d_LLF_Variant(state_q, mean_w,
             parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           // std::cout << "The value in the dof is q =[ "<<state_q[0]<< " "<<state_q[1]<<" "<< state_q[2] << "]"<<std::endl;
@@ -763,7 +763,7 @@ straight_bound_preserving_projection_1d(SolutionType & solution, const DoFHandle
           
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then
-          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
+          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d_LLF_Variant(state_q, mean_w,
             parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           // std::cout << "The value in the dof is q =[ "<<state_q[0]<< " "<<state_q[1]<<" "<< state_q[2] << "]"<<std::endl;
@@ -772,7 +772,7 @@ straight_bound_preserving_projection_1d(SolutionType & solution, const DoFHandle
 
           // std::cout << "The numerator is " << (mean_w - s).norm();
           // std::cout << "The denominator is " <<  (mean_w - state_q).norm();
-          theta_i_j = (mean_w - s).norm() / (diff_den);
+          theta_i_j = (mean_w - s).norm() / (diff_den+1e-14);
           // std::cout << "Theta_i_j is " << theta_i_j << std::endl;
         // }
         
@@ -945,8 +945,8 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         rho_min = std::min(rho_min, density_values[q]);
       if(rho_min < parameters.epsilon)
       {
-        myReal diff_num = std::abs(cell_average_density - parameters.epsilon);
-        myReal diff_den = std::abs(cell_average_density - rho_min);
+        myReal diff_num = cell_average_density - parameters.epsilon;/*std::abs(cell_average_density - parameters.epsilon);*/
+        myReal diff_den = cell_average_density - rho_min; /*std::abs(cell_average_density - rho_min);*/
         myReal theta = 1.0;
         // if(diff_den < 1e-12)
         //   std::cout<<"Warning in density modification: you are dividing for a small myReal"<<std::endl;
@@ -1029,8 +1029,8 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
 
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then 
-          auto s = find_intersection_1d( state_q, mean_w,
-            parameters.epsilon, min_velocity, max_velocity);
+          auto s = find_intersection( state_q, mean_w,
+            parameters.epsilon, min_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           theta_i_j = (mean_w - s).norm() / diff_den;
         // }
@@ -1175,7 +1175,7 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
   // MPI reduction
   max_velocity_norm = Utilities::MPI::max(max_velocity_norm, MPI_COMM_WORLD);
 
-  max_velocity = max_velocity_norm;
+  max_velocity = std::sqrt(max_velocity_norm);
   min_velocity = 0.;  
 }
 
