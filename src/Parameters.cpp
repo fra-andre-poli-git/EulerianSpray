@@ -8,7 +8,7 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     prm.declare_entry("testcase",
       "1",
       Patterns::Integer(0), // Is it ok even if I want an unsigned?
-      "myReal of case:"
+      "number of case:"
         "- 2: vacuum formation"
         "- 3: moving delta shock"
         "- 4: 2d collapse");
@@ -18,12 +18,12 @@ void Parameters::declare_parameters(ParameterHandler & prm)
     //   Patterns::Integer(0),
     //   "Polynomial degree of finite element basis function for the elements");
 
-    prm.declare_entry("myReal of elements in x direction",
+    prm.declare_entry("number of elements in x direction",
       "400",
       Patterns::Integer(0),
-      "myReal of elements along the x direction: for 1d cases elements along y "
-        "direction will be set as 5, whereas in 2d cases they will be set "
-        "identical as this parameter");
+      "number of elements along the x direction: for 1d cases elements along y "
+        "direction will be set as a twentieth of the ones along x, whereas in "
+        "2d cases they will be set identical as this parameter");
 
     prm.declare_entry("final time",
       "0.5",
@@ -96,7 +96,7 @@ void Parameters::parse_parameters(ParameterHandler & prm)
     testcase = prm.get_integer("testcase");
     // fe_degree = prm.get_integer("finite element degree");
     // n_q_points_1d = fe_degree + 2;
-    n_el_x_direction = prm.get_integer("myReal of elements in x direction");
+    n_el_x_direction = prm.get_integer("number of elements in x direction");
     final_time = prm.get_double("final time");
     snapshot_instant = prm.get_double("snapshot instant");
     plot_everything = prm.get_bool("plot everything");

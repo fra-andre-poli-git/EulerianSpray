@@ -2,7 +2,7 @@
 
 subsection Problem parameters
   set testcase = 6
-  set myReal of elements in x direction = 100 #for 1d cases, use a multiple of 20
+  set number of elements in x direction = 100 #for 1d cases, use a multiple of 20
   set final time = 0.5
   set snapshot instant = 0.01
   set plot everything = false  # for debugging purpose
@@ -25,7 +25,7 @@ subsection Operator parameters
 # Options for numerical flux:
 #  local_lax_friedrichs
 #  godunov
-  set numerical flux type = godunov
+  set numerical flux type = local_lax_friedrichs
 end
 
 subsection Limiter parameters

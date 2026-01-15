@@ -2,11 +2,11 @@
 
 subsection Problem parameters
   set testcase = 4
-  set myReal of elements in x direction = 100 #for 1d cases, use a multiple of 20
+  set number of elements in x direction = 100 #for 1d cases, use a multiple of 20
   set final time = 0.5
   set snapshot instant = 0.01
-  set plot everything = true # for debugging purpose
-  set CFL = 0.5
+  set plot everything = false # for debugging purpose
+  set CFL = 0.01
 end
 
 subsection Integrator parameters
@@ -18,7 +18,7 @@ subsection Integrator parameters
 #  forward_euler,
 #  ssp_stage_2_order_2,
 #  ssp_stage_3_order_3,
-  set Runge Kutta scheme = ssp_stage_3_order_3
+  set Runge Kutta scheme = forward_euler
 end
 
 subsection Operator parameters
@@ -33,5 +33,5 @@ subsection Limiter parameters
 #  none
 #  bound_preserving
   set limiter = bound_preserving
-  set epsilon = 1e-13
+  set epsilon = 1e-12
 end
