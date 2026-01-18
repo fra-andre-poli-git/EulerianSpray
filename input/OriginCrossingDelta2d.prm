@@ -4,7 +4,7 @@ subsection Problem parameters
   set testcase = 7
   set number of elements in x direction = 100 #for 1d cases, use a multiple of 20
   set final time = 0.5
-  set snapshot instant = 0.0125
+  set snapshot instant = 0.01
   set plot everything = false  # for debugging purpose
   set CFL = 0.01
 end
@@ -18,7 +18,7 @@ subsection Integrator parameters
 #  forward_euler,
 #  ssp_stage_2_order_2,
 #  ssp_stage_3_order_3,
-  set Runge Kutta scheme = forward_euler
+  set Runge Kutta scheme = ssp_stage_3_order_3
 end
 
 subsection Operator parameters

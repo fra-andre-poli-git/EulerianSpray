@@ -18,14 +18,14 @@ subsection Integrator parameters
 #  forward_euler,
 #  ssp_stage_2_order_2,
 #  ssp_stage_3_order_3,
-  set Runge Kutta scheme = forward_euler
+  set Runge Kutta scheme = ssp_stage_3_order_3
 end
 
 subsection Operator parameters
 # Options for numerical flux:
 #  local_lax_friedrichs
 #  godunov
-  set numerical flux type = local_lax_friedrichs
+  set numerical flux type = godunov
 end
 
 subsection Limiter parameters
