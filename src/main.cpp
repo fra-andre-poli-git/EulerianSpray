@@ -17,7 +17,6 @@ constexpr unsigned int finite_element_degree = 2;
 
 void test_numerical_flux();
 
-
 int main(int argc, char ** argv){
 	try
   {
