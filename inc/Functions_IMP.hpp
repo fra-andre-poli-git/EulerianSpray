@@ -142,6 +142,7 @@ double InitialSolution<dim>::value(const Point<dim> & p, const unsigned int comp
     */
     default:
       Assert(false, ExcNotImplemented());
+      return 0.;
   }
 }
 
@@ -168,6 +169,7 @@ double FinalSolution<dim>::value(const Point<dim> & p, const unsigned int compon
     }
     default:
       Assert(false, ExcNotImplemented());
+      return 0.;
   }
 }
 
@@ -193,6 +195,7 @@ double FinalSolutionVelocity<dim>::value(const Point<dim> & p, const unsigned in
     }
     default:
       Assert(false, ExcNotImplemented());
+      return 0.;
   }
 }
 

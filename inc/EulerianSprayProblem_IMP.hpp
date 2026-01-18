@@ -16,7 +16,7 @@
 
 #include<memory>
 #include<iostream>
-#include<chrono>
+
 
 
 template<int dim, int degree>
@@ -279,9 +279,10 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
             << std::endl;
 }
 
-// This is the function that writes the solution in a .vtk file
+// This is the function that writes the solution in a .vtu file and outputs to the
+// terminal some information
 template<int dim, int degree>
-void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result_myReal, bool final_time)
+void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result_number, bool final_time)
 {
   // In testcase 3 I have the exact solution at final time
   if(parameters.testcase==3 && final_time)
@@ -295,6 +296,19 @@ void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result
       << ", " << quantity_name << " rho: " << std::setprecision(4)
       << std::setw(10) << errors[0] << ", rho * u: " << std::setprecision(4)
       << std::setw(10) << errors[1] << std::endl;
+  }
+  else
+  if(result_number > 0)
+  {
+    pcout << "Output number "<< result_number<< " of " 
+      << parameters.final_time/parameters.snapshot_instant 
+      << " performed at simulation time: " 
+      << std::setw(8) << std::setprecision(3) << time
+      << "."<<std::endl<<"Time elapsed from the beginning of the execution " 
+      <<  std::chrono::duration<double>(t1-t0).count() << " s. Esteem of the remaining computation time "
+      <<  std::chrono::duration<double>(t1-t0).count()/result_number *
+      (parameters.final_time/parameters.snapshot_instant - result_number)
+      << " s"   <<std::endl;
   }
 
   TimerOutput::Scope t(timer, "output");
@@ -373,7 +387,7 @@ void EulerianSprayProblem<dim, degree>::output_results(const unsigned int result
   {
     const std::string filename = 
       "./results/solution_" +
-        Utilities::int_to_string(result_myReal, 3) + ".vtu";
+        Utilities::int_to_string(result_number, 3) + ".vtu";
     data_out.write_vtu_in_parallel(filename, MPI_COMM_WORLD);
   }
 }
@@ -483,6 +497,10 @@ void EulerianSprayProblem<dim, degree>::run()
   else
     time_step = CFL * std::pow(min_cell_length, 3./2.);
 
+
+  // I comment this section because I need to improve the check of the CFL condition
+  // TODO
+  /*
   // If I use Godunov flux I can check if the time step satisfies the CFL condition
   // provided by [49]
   if(parameters.numerical_flux_type == godunov &&
@@ -497,7 +515,10 @@ void EulerianSprayProblem<dim, degree>::run()
       std::abs(eulerian_spray_operator.get_min_velocity())),
       ExcMessage("This time step doesn't comply with its CFL condition") );
   }
+  */
 
+
+  // This section is needed if I don't choose a fixed time step
   //double CFL = 1./2.;
   // // Now I set the time step to be exactly the biggest to satisfy CFL condition
   //  time_step = CFL/
@@ -508,15 +529,15 @@ void EulerianSprayProblem<dim, degree>::run()
     << ", minimal h: " << min_cell_length
     << std::endl
     << std::endl;
-
+  t0 = std::chrono::high_resolution_clock::now();
+  t1 = std::chrono::high_resolution_clock::now();
   output_results(0, false);
   // This is the time loop
   time = 0;
-  unsigned int timestep_myReal = 0;
+  unsigned int timestep_number = 0;
   while(time < final_time - 1e-12)
   {
-    ++timestep_myReal;
-    auto t0 = std::chrono::high_resolution_clock::now();
+    ++timestep_number;
     // Here the integration in time is performed by the integrator
     integrator->perform_time_step(eulerian_spray_operator,
       time,
@@ -527,15 +548,14 @@ void EulerianSprayProblem<dim, degree>::run()
       dof_handler,
       mapping,
       fe);
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    pcout<<"Performed time step at time: "<<time<<
-      ", time step number: "<< timestep_myReal<<
-      "\n"<< "Computation of time step took "<<
-      std::chrono::duration<double>(t1-t0).count() << " s\n"<<std::endl;
+    t1 = std::chrono::high_resolution_clock::now();
+    // pcout<<"Performed time step at time: "<<time<<
+    //   ", time step number: "<< timestep_number<<
+    //   "\n"<< "Computation of time step took "<<
+    //   std::chrono::duration<double>(t1-t0).count() << " s\n"<<std::endl;
 
     if(parameters.plot_everything)
-      output_results(timestep_myReal, false);
+      output_results(timestep_number, false);
     else
     {
       if(static_cast<int>(time / parameters.snapshot_instant) !=
@@ -561,7 +581,7 @@ void EulerianSprayProblem<dim, degree>::run()
   }
 
   // A final output
-  output_results(timestep_myReal, true);
+  output_results(timestep_number, true);
   timer.print_wall_time_statistics(MPI_COMM_WORLD);
   pcout<<std::endl;
 }

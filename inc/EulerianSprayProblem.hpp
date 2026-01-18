@@ -14,7 +14,9 @@
 #include<deal.II/numerics/data_postprocessor.h>
 #include<deal.II/base/timer.h>
 #include<deal.II/base/conditional_ostream.h>
+
 #include<vector>
+#include<chrono>
 
 
 
@@ -49,6 +51,8 @@ class EulerianSprayProblem{
     DoFHandler<dim> dof_handler;
 
     double time;
+
+    std::chrono::high_resolution_clock::time_point t0, t1;
 
     double time_step;
 
