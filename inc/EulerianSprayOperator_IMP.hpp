@@ -396,7 +396,7 @@ bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & 
       cell_average[d] /= cell->measure();
       if(d == 0)
         Assert(cell_average[d] >= 0.0,
-          ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_averages[cell_no][d])));
+          ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_average[d])));
       // if(d == 1)
       //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
       //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
@@ -518,7 +518,7 @@ bound_preserving_projection_1d(SolutionType & solution, const DoFHandler<dim> & 
           
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then
-          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d_LLF_Variant(state_q, mean_w,
+          dealii::Tensor<1, dim  + 1, myReal> s = find_intersection_1d(state_q, mean_w,
             parameters.epsilon, min_velocity, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
           // std::cout << "The value in the dof is q =[ "<<state_q[0]<< " "<<state_q[1]<<" "<< state_q[2] << "]"<<std::endl;
@@ -662,7 +662,7 @@ straight_bound_preserving_projection_1d(SolutionType & solution, const DoFHandle
       cell_average[d] /= cell->measure();
       if(d == 0)
         Assert(cell_average[d] >= 0.0,
-          ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_averages[cell_no][d])));
+          ExcMessage("Error: average density is negative: \bar{rho} = " + std::to_string(cell_average[d])));
       // if(d == 1)
       //   Assert((cell_averages[cell_no][d] <= cell_averages[cell_no][0] * max_velocity ) &&
       //     (cell_averages[cell_no][d] >= cell_averages[cell_no][0] * min_velocity ),
@@ -783,7 +783,7 @@ straight_bound_preserving_projection_1d(SolutionType & solution, const DoFHandle
         // Compare theta^i_j with theta_j and set theta_j = min(theta_j, theta^i_j)
         theta = std::min( theta, theta_i_j);
         Assert(theta >= 0.0 && theta <= 1.0,
-          ExcMessage("theta_j = "+ std::to_string(theta_j) +
+          ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
       }
       for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
@@ -865,7 +865,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
 
   // Set the quadrature points
   // Number of points needed for Gauss-Lobatto
-  unsigned int M = (degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
+  unsigned int M = /*degree + 3;*/(degree + 3) % 2 == 0 ? (degree + 3)/2 : (degree + 4)/2;
   // Number of points needed for Gauss
   unsigned int L = degree + 1;
   // I use the brace initialization since the compiler complaints, using a
@@ -950,7 +950,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         myReal theta = 1.0;
         // if(diff_den < 1e-12)
         //   std::cout<<"Warning in density modification: you are dividing for a small myReal"<<std::endl;
-        theta = diff_num / (diff_den /*+ 1e-14*/);
+        theta = diff_num / (diff_den+1e-14);
         Assert(theta >= 0.0 && theta <= 1.0,
           ExcMessage("theta = "+ std::to_string(theta) +
           " must be between 0 and 1"));
@@ -967,7 +967,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
         }
       }
       // Modify the velocity
-      myReal theta_j = 2.0;
+      myReal theta_j = 1.0;
       myReal theta_i_j = 2.0;   
       dealii::Tensor<1, dim  + 1, myReal> state_q, mean_w;
       dealii::Tensor<1, dim, myReal> state_velocity, mean_velocity;
@@ -998,7 +998,7 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
             parameters.epsilon, max_velocity);
         
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
-          theta_i_j = (mean_w - s).norm() / diff_den;
+          theta_i_j = (mean_w - s).norm() / (diff_den+ 1e-14);
 
         // }
 
@@ -1030,9 +1030,9 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           // Here I find s, the intersection between q - \line{w} and
           // \partial G_\epsilon and then 
           auto s = find_intersection( state_q, mean_w,
-            parameters.epsilon, min_velocity);
+            parameters.epsilon, max_velocity);
           // Compute theta^j = ||\line{w} - s||/||\line{w} - q||
-          theta_i_j = (mean_w - s).norm() / diff_den;
+          theta_i_j = (mean_w - s).norm() / (diff_den+1e-14);
         // }
         // Compare theta^i_j with theta_j and set 
         // theta_j = min(theta_j, theta^i_j)
@@ -1041,17 +1041,19 @@ bound_preserving_projection(SolutionType & solution, const DoFHandler<dim> & dof
           ExcMessage("theta_j = "+ std::to_string(theta_j) +
           " must be between 0 and 1"));
       }
-
-      for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+      if(theta_j < 1.0)
       {
-        // Each DoF is associated to a different component of the system
-        unsigned int comp_i = fe.system_to_component_index(i).first;
-        solution(local_dof_indices[i]) = 
-          (1.-theta_j) * cell_average[comp_i] +
-          theta_j * (solution(local_dof_indices[i]));
-          // cell_average[comp_i] +
-          // theta_j * 
-          // (solution(local_dof_indices[i]) - cell_average[comp_i]);
+        for(unsigned int i=0; i<fe.dofs_per_cell; ++i)
+        {
+          // Each DoF is associated to a different component of the system
+          unsigned int comp_i = fe.system_to_component_index(i).first;
+          solution(local_dof_indices[i]) = 
+            (1.-theta_j) * cell_average[comp_i] +
+            theta_j * (solution(local_dof_indices[i]));
+            // cell_average[comp_i] +
+            // theta_j * 
+            // (solution(local_dof_indices[i]) - cell_average[comp_i]);
+        }
       }
     }
   }  

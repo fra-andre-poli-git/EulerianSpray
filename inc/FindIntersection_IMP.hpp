@@ -189,7 +189,7 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   auto f = [&](double t)->double
   {
     const auto s = (1.-t) * w + t * q;
-    double momentum_norm = 0;
+    double momentum_norm = 0.;
     for(unsigned d = 1; d < dim; ++d)
       momentum_norm += (s[d]*s[d]);
 
@@ -202,10 +202,12 @@ template<int dim> dealii::Tensor<1, dim, myReal> find_intersection(
   const int max_it = 100;
   const double tol = 1e-14;
   double tm, fm;
-  Assert(f0 * f1 > 0., ExcMessage("Problem in find_intersection: solution average appears to be outside G region"))
-  // if(f0 * f1 > 0.) //if both actual velocity and mean velocity are outside the admissibility region
-  //   return w; // i choose s as the average solution
- // else // otherwise I go on with bisection
+  // Assert(f0 * f1 > 0., ExcMessage("Problem in find_intersection: solution average appears to be outside G region"
+  //   " indeed w = [" + std::to_string(w[0]) + ", " + std::to_string(w[1]) + ", " + std::to_string(w[2]) + "], S (max velocity norm) = " +
+  //   std::to_string(S) + " and epsilon = " + std::to_string(epsilon) + " and q = ["+ std::to_string(q[0]) + ", " + std::to_string(q[1]) + ", " + std::to_string(q[2]) + "]"));
+  if(f0 * f1 > 0.) //if both actual velocity and mean velocity are outside the admissibility region
+    return w; // i choose s as the average solution
+  else // otherwise I go on with bisection
   {
     for(int it = 0; it < max_it; ++it)
     {
