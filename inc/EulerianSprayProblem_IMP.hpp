@@ -158,8 +158,8 @@ void EulerianSprayProblem<dim, degree>::make_grid_and_dofs()
     {
       GridGenerator::subdivided_hyper_rectangle(triangulation,
         {parameters.n_el_x_direction,parameters.n_el_x_direction/20},
-        Point<dim>(-1,0),
-        Point<dim>(1,0.1),
+        Point<dim>(-0.5,0),
+        Point<dim>(0.5,0.05),
         true);
       #ifdef DEAL_II_WITH_P4EST
       std::vector<GridTools::PeriodicFacePair<
