@@ -36,6 +36,9 @@ build/
 build_debug/
 build_release/
 build_toolchain/
+build2/
+build3/
+
 
 #cmake stuff
 compile_commands.json
