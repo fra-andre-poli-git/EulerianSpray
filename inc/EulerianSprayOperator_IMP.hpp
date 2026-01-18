@@ -1138,10 +1138,6 @@ void EulerianSprayOperator<dim, degree, n_q_points_1d>::
 
   max_velocity = max_velocity_x;
   min_velocity = min_velocity_x;
-  // max_velocity = 0.4;
-  // min_velocity = -0.5;
-
-
 }
 
 template<int dim, int degree, int n_q_points_1d>

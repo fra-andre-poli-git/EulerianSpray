@@ -1,0 +1,37 @@
+#Listing of parameteres
+
+subsection Problem parameters
+  set testcase = 3
+  set number of elements in x direction = 100 #for 1d cases, use a multiple of 20
+  set final time = 0.5
+  set snapshot instant = 0.01
+  set plot everything = false  # for debugging purpose
+  set CFL = 0.01
+end
+
+subsection Integrator parameters
+# Options for Runge Kutta scheme:
+#  lsrk_stage_5_order_4,
+#  lsrk_stage_7_order_4,
+#  lsrk_stage_3_order_3, 
+#  lsrk_stage_9_order_5,
+#  forward_euler,
+#  ssp_stage_2_order_2,
+#  ssp_stage_3_order_3,
+  set Runge Kutta scheme = ssp_stage_3_order_3
+end
+
+subsection Operator parameters
+# Options for numerical flux:
+#  local_lax_friedrichs
+#  godunov
+  set numerical flux type = godunov
+end
+
+subsection Limiter parameters
+# Options for limiter:
+#  none
+#  bound_preserving
+  set limiter = bound_preserving
+  set epsilon = 1e-13
+end
