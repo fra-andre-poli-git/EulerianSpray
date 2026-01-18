@@ -37,8 +37,38 @@ mkdir results
 ./main ../input/INPUTFILENAME.prm
 ```
 where INPUTFILENAME.prm is the desired input file.
+
+A guide to INPUTFILENAME:
+ - Test 1: Accuracy1d.prm, not implemented
+ - Test 2: DeltaShock1d.prm, a $\delta$-shock wave travelling
+ - Test 3: Vacuum1d.prm, creation of vacuum in one dimension
+ - Test 4: VacuumCloseUp1d.prm, a close-up on the vacuum of the previous case
+ - Test 5: not implemented
+ - Test 6: OriginRadialDelta.prm, $\delta$ in the origin with radial velocity
+ - Test 7: OriginCrossinDelta.prm, $\delta$ along the axis crossing in the origin
+ - Test 8: AnularDelta.prm, $\delta$ in a circle
+ - Test 9: CrossVacuum2d.prm, vacuum along the axis
+
 I underline the switch to release mode, since otherwise 2d simulation would be
 unfeasible. To interrogate the build type:
 ```bash
 grep CMAKE_BUILD_TYPE CMakeCache.txt
 ```
+
+In directory myresults/ I put the computations I performed. The way I store them
+is:
+```bash
+.
+├── Test1
+│   ├── Degree0
+│   ├── Degree1
+│   └── Degree2
+└── Test2
+│   ├── Degree0
+│   ├── Degree1
+│   └── Degree2
+...
+```
+and each DegreeN/ directory will contain some directories: inside will be found
+the output files of the code (the files generated in build/results) and the
+input used to produce it.
